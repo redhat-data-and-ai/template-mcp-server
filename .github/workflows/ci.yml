@@ -25,7 +25,10 @@ jobs:
         version: "latest"
 
     - name: Set up Python
-      run: uv python install ${{ env.PYTHON_VERSION }}
+      run: uv venv --python ${{ env.PYTHON_VERSION }}
+
+    - name: Activate venv
+      run: source .venv/bin/activate
 
     - name: Install dependencies
       run: |
