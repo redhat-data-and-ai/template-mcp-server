@@ -1,5 +1,12 @@
 # Template MCP Server
 
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-81%2B%20passing-brightgreen.svg)]()
+[![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen.svg)]()
+[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Description
 
 A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
@@ -479,6 +486,68 @@ The project includes a comprehensive test suite with the following structure:
    ```bash
    curl -k https://localhost:3000/health
    ```
+
+## Continuous Integration & Deployment
+
+This project uses GitHub Actions for automated CI/CD workflows to ensure code quality, security, and reliability.
+
+### CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| **CI** | Push to main, PRs | Run tests, linting, type checking, security scans |
+| **Dependency Updates** | Weekly schedule | Automated dependency updates and security audits |
+
+### CI Pipeline Features
+
+**✅ Code Quality Assurance:**
+- Multi-Python version testing (3.12, 3.13)
+- Comprehensive test suite execution (81+ tests)
+- Code coverage reporting (80%+ requirement)
+- Ruff linting and formatting validation
+- MyPy type checking
+- Docstring validation with pydocstyle
+
+**✅ Security & Compliance:**
+- Bandit security linting
+- Safety dependency vulnerability scanning
+
+**✅ Automation & Maintenance:**
+- Dependabot configuration for automated dependency updates
+- Pre-commit hook automation
+- Weekly security audits
+- Automated PR creation for dependency updates
+
+### Running CI Checks Locally
+
+Before pushing code, run the same checks that CI runs:
+
+```bash
+# Install development dependencies
+uv pip install -e ".[dev]"
+
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Run tests with coverage
+pytest --cov=template_mcp_server --cov-fail-under=80
+
+# Run security checks
+bandit -r template_mcp_server/
+safety check
+
+# Build and test container
+docker build -t template-mcp-server .
+docker run --rm template-mcp-server python -c "import template_mcp_server; print('OK')"
+```
+
+### Branch Protection
+
+The `main` branch is protected with the following requirements:
+- All CI checks must pass
+- Pull request reviews required
+- Up-to-date branches required
+- No direct pushes to main
 
 ## How to Contribute
 
