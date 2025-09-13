@@ -35,6 +35,7 @@ dev = [
     "langchain-google-genai ==2.1.8",
     "langchain_mcp_adapters==0.1.8",
     "langgraph==0.5.4",
+    "bandit==1.8.6",
 ]
 
 [project.scripts]

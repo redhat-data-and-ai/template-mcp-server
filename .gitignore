@@ -184,3 +184,5 @@ build.log
 *.bak
 .idea
 uv.lock
+bandit-report.json
+safety-report.json
