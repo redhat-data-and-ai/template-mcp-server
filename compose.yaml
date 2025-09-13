@@ -1,0 +1,22 @@
+services:
+  template-mcp-server:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: template-mcp-server
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "-k", "http://0.0.0.0:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - template-network
+
+networks:
+  template-network:
+    driver: bridge
