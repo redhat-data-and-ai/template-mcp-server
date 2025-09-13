@@ -12,6 +12,7 @@ from pathlib import Path
 
 async def read_redhat_logo_content() -> dict:
     """Return the Red Hat logo as a base64 encoded string.
+    source: https://www.redhat.com/rhdc/managed-files/Logo-Red_Hat-Hat_icon-Standard-RGB.svg
 
     Reads the Red Hat logo PNG file from the assets directory and returns
     it as a base64 encoded string for MCP clients to use.
