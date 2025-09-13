@@ -183,3 +183,4 @@ build.log
 *.tmp
 *.bak
 .idea
+uv.lock

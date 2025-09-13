@@ -13,7 +13,7 @@ class TestCodeReviewPromptTool:
         """Test basic code review prompt generation."""
         code = "def hello():\n    print('Hello, World!')"
         result = get_code_review_prompt(code)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -27,7 +27,7 @@ class TestCodeReviewPromptTool:
         code = "function hello() { console.log('Hello'); }"
         language = "javascript"
         result = get_code_review_prompt(code, language)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -45,7 +45,7 @@ class TestCodeReviewPromptTool:
             ("#include <stdio.h>", "c"),
             ("std::cout << 'Hello';", "cpp"),
         ]
-        
+
         for code, language in test_cases:
             result = get_code_review_prompt(code, language)
             assert isinstance(result, list)
@@ -57,7 +57,7 @@ class TestCodeReviewPromptTool:
     def test_code_review_prompt_empty_code(self):
         """Test code review prompt with empty code."""
         result = get_code_review_prompt("")
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -73,9 +73,9 @@ class TestCodeReviewPromptTool:
 
 # Test the function
 print(calculate_fibonacci(10))"""
-        
+
         result = get_code_review_prompt(code)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -86,7 +86,7 @@ print(calculate_fibonacci(10))"""
         """Test code review prompt with special characters in code."""
         code = "print('Hello \"World\"!\\n\\t@#$%^&*()')"
         result = get_code_review_prompt(code)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -96,24 +96,26 @@ print(calculate_fibonacci(10))"""
         """Test code review prompt with MCP context."""
         mock_context = Mock()
         mock_context.info = Mock()
-        
+
         code = "def test(): pass"
         language = "python"
-        
+
         result = get_code_review_prompt(code, language, mock_context)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
-        
+
         # Verify context.info was called
-        mock_context.info.assert_called_once_with(f"Generating code review prompt for {language} code")
+        mock_context.info.assert_called_once_with(
+            f"Generating code review prompt for {language} code"
+        )
 
     def test_code_review_prompt_without_context(self):
         """Test code review prompt without MCP context."""
         code = "def test(): pass"
         result = get_code_review_prompt(code, "python", None)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -123,9 +125,9 @@ print(calculate_fibonacci(10))"""
         """Test that the prompt contains all expected sections."""
         code = "def example(): return True"
         result = get_code_review_prompt(code)
-        
+
         content = result[0]["content"]
-        
+
         # Check for all expected focus areas
         assert "code quality" in content.lower()
         assert "readability" in content.lower()
@@ -138,9 +140,9 @@ print(calculate_fibonacci(10))"""
         code = "def test(): pass"
         language = "python"
         result = get_code_review_prompt(code, language)
-        
+
         content = result[0]["content"]
-        
+
         # Check for proper markdown code block formatting
         assert f"```{language}" in content
         assert "```" in content
@@ -150,9 +152,9 @@ print(calculate_fibonacci(10))"""
         """Test code review prompt with large code block."""
         # Generate a large code block
         code = "\n".join([f"def function_{i}():\n    return {i}" for i in range(100)])
-        
+
         result = get_code_review_prompt(code)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -162,7 +164,7 @@ print(calculate_fibonacci(10))"""
     def test_code_review_prompt_case_insensitive_language(self):
         """Test that language parameter works with different cases."""
         code = "def test(): pass"
-        
+
         for language in ["Python", "PYTHON", "PyThOn"]:
             result = get_code_review_prompt(code, language)
             assert isinstance(result, list)
@@ -173,7 +175,7 @@ print(calculate_fibonacci(10))"""
         """Test code review prompt with unicode characters in code."""
         code = "def greet():\n    print('Hello, 世界! 🌍')\n    return '感谢'"
         result = get_code_review_prompt(code)
-        
+
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["role"] == "user"
@@ -185,7 +187,7 @@ print(calculate_fibonacci(10))"""
         """Test that the return format is exactly as expected."""
         code = "test_code"
         result = get_code_review_prompt(code)
-        
+
         # Verify exact structure
         assert isinstance(result, list)
         assert len(result) == 1

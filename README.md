@@ -24,53 +24,53 @@ graph TB
         B[Custom MCP Client]
         C[Development Tools]
     end
-    
+
     subgraph "Network Layer"
         D[Load Balancer/Proxy]
         E[SSL Termination]
     end
-    
+
     subgraph "Template MCP Server"
         subgraph "Application Layer"
             F[FastAPI Application<br/>api.py]
             G[Health Check Endpoint<br/>/health]
             H[MCP Protocol Handler<br/>/mcp]
         end
-        
+
         subgraph "MCP Core"
             I[TemplateMCPServer<br/>mcp.py]
             J[FastMCP Instance<br/>Protocol Implementation]
             K[Tool Registry<br/>Dynamic Registration]
         end
-        
+
         subgraph "Tool Layer"
             L[Mathematical Tools<br/>multiply_numbers]
             M[Resource Tools<br/>redhat_logo]
             N[Prompt Tools<br/>code_review_prompt]
             O[Custom Tools<br/>Extensible]
         end
-        
+
         subgraph "Infrastructure Layer"
             P[Configuration Management<br/>settings.py]
             Q[Structured Logging<br/>pylogger.py]
             R[Error Handling<br/>Exception Management]
             S[Asset Management<br/>Static Resources]
         end
-        
+
         subgraph "Transport Layer"
             T[HTTP Transport]
             U[SSE Transport]
             V[Streamable HTTP Transport]
         end
     end
-    
+
     subgraph "External Dependencies"
         W[Environment Variables<br/>.env]
         X[SSL Certificates<br/>TLS/HTTPS]
         Y[Static Assets<br/>Images/Files]
         Z[Container Runtime<br/>Docker/Podman]
     end
-    
+
     A --> D
     B --> D
     C --> D
@@ -96,7 +96,7 @@ graph TB
     E --> X
     S --> Y
     Z --> F
-    
+
     classDef client fill:#e3f2fd
     classDef network fill:#f3e5f5
     classDef application fill:#e8f5e8
@@ -105,7 +105,7 @@ graph TB
     classDef infrastructure fill:#f1f8e9
     classDef transport fill:#fef7e0
     classDef external fill:#f5f5f5
-    
+
     class A,B,C client
     class D,E network
     class F,G,H application
@@ -121,65 +121,65 @@ graph TB
 ```mermaid
 flowchart TD
     A[MCP Client Request] --> B{Transport Protocol?}
-    
+
     B -->|HTTP/Streamable-HTTP| C[FastAPI App<br/>api.py]
     B -->|SSE| D[SSE App<br/>create_sse_app]
-    
+
     C --> E[Health Check?]
     D --> E
-    
+
     E -->|/health| F[Health Endpoint<br/>Return Status]
     E -->|/mcp| G[MCP Request Handler<br/>FastMCP Instance]
-    
+
     G --> H{MCP Method Type?}
-    
+
     H -->|tools/list| I[List Available Tools<br/>Return tool definitions]
     H -->|tools/call| J[Tool Execution Router<br/>mcp.py]
-    
+
     J --> K{Which Tool?}
-    
+
     K -->|multiply_numbers| L[Multiply Tool<br/>multiply_tool.py]
     K -->|read_redhat_logo_content| M[Logo Resource Tool<br/>redhat_logo.py]
     K -->|get_code_review_prompt| N[Code Review Prompt<br/>code_review_prompt_tool.py]
-    
+
     L --> O[Validate Input<br/>Check numeric types]
     M --> P[Read Asset File<br/>Base64 encode PNG]
     N --> Q[Generate Prompt<br/>Format code review template]
-    
+
     O --> R[Perform Calculation<br/>a * b]
     P --> S[Return Image Data<br/>MIME type + base64]
     Q --> T[Return Prompt Array<br/>Structured messages]
-    
+
     R --> U[Log Result<br/>Structured logging]
     S --> U
     T --> U
-    
+
     U --> V[Return Success Response<br/>JSON format]
-    
+
     V --> W[Send to MCP Client<br/>Complete request cycle]
-    
+
     F --> W
     I --> W
-    
+
     X[Configuration Loading<br/>settings.py] --> Y[Environment Variables<br/>.env file]
     Y --> Z[Pydantic Validation<br/>Type checking & defaults]
     Z --> AA[Server Startup<br/>main.py]
     AA --> C
     AA --> D
-    
+
     BB[Error Handling] --> CC[Structured Logging<br/>pylogger.py]
     CC --> DD[JSON Output<br/>Timestamp + Context]
-    
+
     O --> BB
     P --> BB
     Q --> BB
-    
+
     classDef request fill:#e3f2fd
     classDef routing fill:#f3e5f5
     classDef tools fill:#e8f5e8
     classDef config fill:#fff3e0
     classDef logging fill:#fce4ec
-    
+
     class A,B,E,H,K request
     class C,D,G,J routing
     class L,M,N,O,P,Q,R,S,T tools
@@ -255,13 +255,13 @@ template-mcp-server/
    ```bash
    # On macOS/Linux:
    curl -LsSf https://astral.sh/uv/install.sh | sh
-   
+
    # On MacOS using brew
    brew install uv
-   
+
    # On Windows:
    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-   
+
    # Or with pip:
    pip install uv
    ```
@@ -275,11 +275,11 @@ template-mcp-server/
 3. **Create and activate a virtual environment with uv:**
    ```bash
    uv venv
-   
+
    # Activate the virtual environment:
    # On macOS/Linux:
    source .venv/bin/activate
-   
+
    # On Windows:
    .venv\Scripts\activate
    ```
@@ -300,10 +300,10 @@ template-mcp-server/
    ```bash
    # Using the installed console script
    template-mcp-server
-   
+
    # Or directly with Python module
    python -m template_mcp_server.src.main
-   
+
    # Or using uv to run directly
    uv run python -m template_mcp_server.src.main
    ```
@@ -379,15 +379,15 @@ The project includes a comprehensive test suite with 81+ tests covering unit tes
 
 3. **Run tests by category:**
    ```bash
-   # Unit tests only 
+   # Unit tests only
    pytest -m unit
-   
+
    # Integration tests only
    pytest -m integration
-   
+
    # Slow running tests
    pytest -m slow
-   
+
    # Tests requiring network access
    pytest -m network
    ```
@@ -400,7 +400,7 @@ The project includes a comprehensive test suite with 81+ tests covering unit tes
    pytest tests/test_code_review_prompt.py -v
    pytest tests/test_settings.py -v
    pytest tests/test_mcp_server.py -v
-   
+
    # Run integration tests
    pytest tests/test_integration.py -v
    ```
@@ -409,10 +409,10 @@ The project includes a comprehensive test suite with 81+ tests covering unit tes
    ```bash
    # Verbose output with detailed test names
    pytest -v
-   
+
    # Short traceback format
    pytest --tb=short
-   
+
    # Quiet output (minimal)
    pytest -q
    ```
@@ -423,10 +423,10 @@ The project includes a comprehensive test suite with 81+ tests covering unit tes
    ```bash
    # Check for issues
    ruff check .
-   
+
    # Auto-fix issues
    ruff check . --fix
-   
+
    # Format code
    ruff format .
    ```
@@ -581,10 +581,10 @@ The `main` branch is protected with the following requirements:
    ruff check . --fix
    ruff format .
    mypy template_mcp_server/
-   
+
    # Tests
    pytest --cov=template_mcp_server
-   
+
    # Pre-commit validation
    pre-commit run --all-files
    ```
@@ -614,10 +614,10 @@ The `main` branch is protected with the following requirements:
    # template_mcp_server/src/tools/your_tool.py
    async def your_tool_function(param: str) -> dict:
        """Your tool description.
-       
+
        Args:
            param: Parameter description.
-           
+
        Returns:
            dict: Result dictionary.
        """
@@ -629,7 +629,7 @@ The `main` branch is protected with the following requirements:
    ```python
    # In template_mcp_server/src/mcp.py
    from template_mcp_server.src.tools.your_tool import your_tool_function
-   
+
    def _register_mcp_tools(self) -> None:
        self.mcp.tool()(your_tool_function)  # Add this line
    ```
@@ -639,7 +639,7 @@ The `main` branch is protected with the following requirements:
    # tests/test_your_tool.py
    import pytest
    from template_mcp_server.src.tools.your_tool import your_tool_function
-   
+
    @pytest.mark.asyncio
    async def test_your_tool():
        result = await your_tool_function("test_param")

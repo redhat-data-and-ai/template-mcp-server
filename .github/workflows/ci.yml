@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -166,7 +166,7 @@ jobs:
   build-test:
     name: Test Package Build
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

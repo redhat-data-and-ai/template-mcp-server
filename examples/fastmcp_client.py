@@ -6,7 +6,6 @@ using the FastMCP Client and make actual MCP protocol calls.
 """
 
 import asyncio
-import json
 
 import requests
 from fastmcp import Client

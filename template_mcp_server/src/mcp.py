@@ -7,12 +7,13 @@ register and manage MCP capabilities.
 
 from fastmcp import FastMCP
 
+from template_mcp_server.src.tools.code_review_prompt_tool import (
+    get_code_review_prompt,
+)
+
 # Import tools from the tools package
 from template_mcp_server.src.tools.multiply_tool import (
     multiply_numbers,
-)
-from template_mcp_server.src.tools.code_review_prompt_tool import (
-    get_code_review_prompt,
 )
 from template_mcp_server.src.tools.redhat_logo import (
     read_redhat_logo_content,
