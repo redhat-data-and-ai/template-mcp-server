@@ -29,7 +29,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -e ".[dev]
+        uv pip install -e ".[dev]"
 
     - name: Run Pre Commit
       run: |
@@ -56,7 +56,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -e ".[dev]
+        uv pip install -e ".[dev]"
 
     - name: Run tests with coverage
       run: |
@@ -89,7 +89,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -e ".[dev]"
+        uv pip install -e ".[dev]""
 
     - name: Run Bandit security linter
       run: |
@@ -98,9 +98,9 @@ jobs:
 
     - name: Run Safety check
       run: |
-        uv run safety check --output json --save-json safety-report.jso
-      with:
-        api-key: ${{ secrets.SAFETY_API_KEY }}
+        uv run safety check --output json --save-json safety-report.json
+      env:
+        SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       continue-on-error: true
 
     - name: Upload security scan results
