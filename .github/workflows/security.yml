@@ -37,7 +37,6 @@ jobs:
       id: bandit
       run: |
         uv run bandit -r template_mcp_server/ -f json -o bandit-report.json
-      continue-on-error: true
 
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
