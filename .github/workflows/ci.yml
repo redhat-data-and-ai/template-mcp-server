@@ -98,7 +98,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -e ".[dev]"
+        uv pip install bandit==1.8.6 safety==3.6.1
 
     - name: Run Bandit security linter
       run: |
@@ -107,7 +107,7 @@ jobs:
 
     - name: Run Safety check
       run: |
-        uv run safety check --output json --save-json safety-report.json
+        uv run safety scan --output json --save-json safety-report.json
       env:
         SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       continue-on-error: true
