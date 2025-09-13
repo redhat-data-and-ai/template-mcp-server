@@ -1,0 +1,67 @@
+name: Security
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up virtual env
+      run: uv venv --python ${{ env.PYTHON_VERSION }}
+
+    - name: Activate virtual env
+      run: source .venv/bin/activate
+
+    - name: Install dependencies
+      run: |
+        uv pip install bandit==1.8.6
+
+    - name: Run Bandit security linter
+      id: bandit
+      run: |
+        uv run bandit -r template_mcp_server/ -f json -o bandit-report.json
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+        retention-days: 30
+
+    - name: Check Bandit results
+      run: |
+        if [ -f bandit-report.json ]; then
+          issues=$(jq '.results | length' bandit-report.json)
+          if [ "$issues" -gt 0 ]; then
+            echo "::error::Bandit found $issues security issues:"
+            echo "## Security Issues Found" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            jq -r '.results[] | "**\(.test_name)** (\(.test_id)) - \(.issue_severity)/\(.issue_confidence)\n- File: `\(.filename):\(.line_number)`\n- Issue: \(.issue_text)\n- More info: \(.more_info)\n"' bandit-report.json >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "No security issues found"
+            echo "✅ No security vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "::error::Bandit report not found, assuming failure"
+          exit 1
+        fi
