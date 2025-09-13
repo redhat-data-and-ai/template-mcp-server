@@ -107,10 +107,15 @@ jobs:
 
     - name: Run Safety check
       run: |
-        uv run safety scan --output json --save-json safety-report.json
+        uv run safety check --output json --save-json safety-report.json
       env:
         SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       continue-on-error: true
+
+    - name: Run Safety CLI to check for vulnerabilities
+      uses: pyupio/safety-action@v1
+      with:
+        api-key: ${{ secrets.SAFETY_API_KEY }}
 
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
