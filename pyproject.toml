@@ -41,9 +41,9 @@ dev = [
 template-mcp-server = "template_mcp_server.src.main:main"
 
 [project.urls]
-Homepage = "https://gitlab.cee.redhat.com/dataverse/ai/mcp-servers/template-mcp-server"
-Repository = "https://gitlab.cee.redhat.com/dataverse/ai/mcp-servers/template-mcp-server"
-Issues = "https://gitlab.cee.redhat.com/dataverse/ai/mcp-servers/template-mcp-server/issues"
+Homepage = "https://github.com/redhat-data-and-ai/template-mcp-server"
+Repository = "https://github.com/redhat-data-and-ai/template-mcp-server"
+Issues = "https://github.com/redhat-data-and-ai/template-mcp-server/issues"
 
 [tool.ruff]
 target-version = "py312"
