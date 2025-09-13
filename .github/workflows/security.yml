@@ -34,6 +34,7 @@ jobs:
         uv pip install bandit==1.8.6
 
     - name: Run Bandit security linter
+      id: bandit
       run: |
         uv run bandit -r template_mcp_server/ -f json -o bandit-report.json
       continue-on-error: true
@@ -46,3 +47,22 @@ jobs:
         path: |
           bandit-report.json
         retention-days: 30
+
+    - name: Check Bandit results
+      run: |
+        if [ -f bandit-report.json ]; then
+          issues=$(jq '.results | length' bandit-report.json)
+          if [ "$issues" -gt 0 ]; then
+            echo "::error::Bandit found $issues security issues:"
+            echo "## Security Issues Found" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            jq -r '.results[] | "**\(.test_name)** (\(.test_id)) - \(.issue_severity)/\(.issue_confidence)\n- File: `\(.filename):\(.line_number)`\n- Issue: \(.issue_text)\n- More info: \(.more_info)\n"' bandit-report.json >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "No security issues found"
+            echo "✅ No security vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "::error::Bandit report not found, assuming failure"
+          exit 1
+        fi
