@@ -11,7 +11,7 @@ version = "0.1.0"
 description = "A template for Model Context Protocol (MCP) server development"
 readme = "README.md"
 keywords = ["mcp", "template", "server"]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "fastmcp==2.10.4",
     "httpx==0.28.1",
@@ -21,8 +21,8 @@ dependencies = [
     "python-dotenv==1.1.1",
     "fastapi==0.116.0",
     "uvicorn==0.35.0",
-    "asyncpg==0.29.0",
-    "psycopg2-binary==2.9.9",
+    "asyncpg==0.30.0",
+    "psycopg==3.2.3",
     "itsdangerous==2.2.0",
     "requests-oauthlib==2.0.0",
 ]
