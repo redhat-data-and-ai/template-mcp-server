@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: template-mcp-postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - template-network
+
+  template-mcp-server:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: template-mcp-server
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "-k", "http://0.0.0.0:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - template-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  template-network:
+    driver: bridge
