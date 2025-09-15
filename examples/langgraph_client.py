@@ -159,7 +159,6 @@ async def get_agent_redhat():
         }
     )
 
-
     tools = await client.get_tools()
     # resources = await client.get_resources(tools)
 

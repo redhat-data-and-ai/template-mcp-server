@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     """
 
     MCP_HOST: str = Field(
-        default="0.0.0.0",
+        default="localhost",
         json_schema_extra={
             "env": "MCP_HOST",
             "description": "Host address for the MCP server",

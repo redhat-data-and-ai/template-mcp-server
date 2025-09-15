@@ -32,7 +32,7 @@ class FastMCPClient:
     def check_server_health(self):
         """Check if the MCP server is healthy."""
         try:
-            response = requests.get(self.health_endpoint)
+            response = requests.get(self.health_endpoint, timeout=10)
             if response.status_code == 200:
                 health_data = response.json()
                 print("✅ MCP Server is healthy!")
