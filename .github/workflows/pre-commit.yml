@@ -32,4 +32,4 @@ jobs:
 
     - name: Run Pre Commit
       run: |
-        uv run pre-commit run --all-files
+        source .venv/bin/activate && pre-commit run --all-files
