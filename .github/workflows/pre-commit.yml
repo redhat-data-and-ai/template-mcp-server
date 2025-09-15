@@ -26,9 +26,6 @@ jobs:
     - name: Set up virtual env
       run: uv venv --python ${{ env.PYTHON_VERSION }}
 
-    - name: Activate virtual env
-      run: source .venv/bin/activate
-
     - name: Install dependencies
       run: |
         uv pip install -e ".[dev]"
