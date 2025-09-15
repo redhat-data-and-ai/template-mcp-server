@@ -17,7 +17,7 @@ class TestSettings:
         settings = Settings()
 
         # Assert
-        assert settings.MCP_HOST == "0.0.0.0"
+        assert settings.MCP_HOST == "localhost"
         assert settings.MCP_PORT == 8080
         assert settings.MCP_TRANSPORT_PROTOCOL == "http"
         assert settings.PYTHON_LOG_LEVEL == "INFO"

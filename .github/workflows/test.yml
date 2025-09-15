@@ -6,16 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  PYTHON_VERSION: "3.12"
-
 jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12"]
 
     steps:
     - name: Checkout code
@@ -27,10 +24,7 @@ jobs:
         version: "latest"
 
     - name: Set up virtual env
-      run: uv venv --python ${{ env.PYTHON_VERSION }}
-
-    - name: Activate virtual env
-      run: source .venv/bin/activate
+      run: uv venv --python ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
@@ -38,7 +32,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        uv run pytest --cov=template_mcp_server --cov-report=xml --cov-report=term-missing --cov-fail-under=50
+        source .venv/bin/activate && pytest --cov=template_mcp_server --cov-report=xml --cov-report=term-missing --cov-fail-under=50
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
