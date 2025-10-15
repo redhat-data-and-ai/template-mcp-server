@@ -3,17 +3,28 @@
 # Detect OS
 UNAME_S := $(shell uname -s)
 
+# Detect Linux distribution from /etc/os-release
+DISTRO_ID := $(shell if [ -f /etc/os-release ]; then . /etc/os-release && echo $$ID; fi)
+
 # Install all prerequisites and dependencies
 install:
 	@echo "Detecting operating system..."
 	@if [ "$(UNAME_S)" = "Darwin" ]; then \
 		echo "macOS detected - using Homebrew"; \
 		$(MAKE) install-macos; \
-	elif [ -f /etc/fedora-release ]; then \
-		echo "Fedora detected - using DNF"; \
+	elif [ "$(UNAME_S)" = "Linux" ] && [ "$(DISTRO_ID)" = "fedora" ]; then \
+		echo "Fedora Linux detected - using DNF"; \
 		$(MAKE) install-fedora; \
+	elif [ "$(UNAME_S)" = "Linux" ] && [ "$(DISTRO_ID)" = "ubuntu" ]; then \
+		echo "Ubuntu Linux detected - using APT (UNTESTED)"; \
+		$(MAKE) install-ubuntu; \
+	elif [ "$(UNAME_S)" = "Linux" ]; then \
+		echo "Linux detected but unsupported distribution: $(DISTRO_ID)"; \
+		echo "Please install uv and podman-compose manually."; \
+		echo "See: https://docs.astral.sh/uv/getting-started/installation/"; \
+		exit 1; \
 	else \
-		echo "Unsupported OS. Please install prerequisites manually."; \
+		echo "Unsupported OS: $(UNAME_S). Please install prerequisites manually."; \
 		exit 1; \
 	fi
 	@echo "Installing Python dependencies..."
@@ -36,6 +47,13 @@ install-fedora:
 	@which uv > /dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 	@echo "Installing podman-compose..."
 	@which podman-compose > /dev/null || sudo dnf install -y podman-compose
+
+# Ubuntu installation using APT (UNTESTED)
+install-ubuntu:
+	@echo "Installing uv..."
+	@which uv > /dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+	@echo "Installing podman-compose..."
+	@which podman-compose > /dev/null || sudo apt-get update && sudo apt-get install -y podman-compose
 
 # Install Python dependencies
 install-python-deps:
