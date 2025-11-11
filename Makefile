@@ -1,4 +1,4 @@
-.PHONY: install clean dev test local
+.PHONY: install clean dev test local sync-upstream
 
 # Detect OS
 UNAME_S := $(shell uname -s)
@@ -86,3 +86,27 @@ local:
 	@echo "Health check available at: http://localhost:5001/health"
 	@echo "Press Ctrl+C to stop the server"
 	@. .venv/bin/activate && python -m template_mcp_server.src.main
+
+sync-upstream:
+	@echo "🔄 Syncing fork with upstream repository..."
+	@if ! git remote | grep -q "^upstream$$"; then \
+		echo "⚠️  Upstream remote not configured. Adding it now..."; \
+		git remote add upstream https://github.com/redhat-data-and-ai/template-mcp-server.git; \
+	fi
+	@echo "📥 Fetching upstream changes..."
+	@git fetch upstream
+	@CHANGES=$$(git rev-list --count HEAD..upstream/main 2>/dev/null || echo "0"); \
+	if [ "$$CHANGES" -eq 0 ]; then \
+		echo "✅ Your fork is already up to date with upstream!"; \
+	else \
+		echo "📊 Found $$CHANGES new commit(s) in upstream"; \
+		echo ""; \
+		echo "📋 Changes to be merged:"; \
+		git log --oneline --graph HEAD..upstream/main; \
+		echo ""; \
+		echo "To merge these changes, run:"; \
+		echo "  git merge upstream/main"; \
+		echo ""; \
+		echo "Or use the interactive script:"; \
+		echo "  ./sync-upstream.sh"; \
+	fi

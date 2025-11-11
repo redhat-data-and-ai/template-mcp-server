@@ -5,6 +5,8 @@
 [![Coverage](https://codecov.io/gh/redhat-data-and-ai/template-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/redhat-data-and-ai/template-mcp-server)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+> **Note**: This is a fork of [redhat-data-and-ai/template-mcp-server](https://github.com/redhat-data-and-ai/template-mcp-server). See [FORK_MAINTENANCE.md](FORK_MAINTENANCE.md) for keeping this fork in sync with upstream.
+
 ## Description
 
 A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
