@@ -1,0 +1,29 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: template-mcp-server
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+spec:
+  successfulBuildsHistoryLimit: 1
+  failedBuildsHistoryLimit: 1
+  output:
+    to:
+      kind: ImageStreamTag
+      name: template-mcp-server:latest
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Containerfile
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits:
+      memory: "8Gi"
+      cpu: "8"
+  triggers: []

@@ -4,7 +4,7 @@ resources:
   - buildconfig.yaml
   - imagestream.yaml
   - configmap.yaml
-  - secret.yaml
+  # - secret.yaml
   - deployment.yaml
   - service.yaml
   - route.yaml

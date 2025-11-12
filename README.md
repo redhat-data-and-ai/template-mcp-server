@@ -332,6 +332,32 @@ The server configuration is managed through environment variables:
    podman run -p 3000:3000 --env-file .env template-mcp-server
    ```
 
+### Deploying to OpenShift
+
+See the [OpenShift Deployment Guide](deployment/openshift/README.md) for complete instructions.
+
+Quick start:
+
+```bash
+# Deploy to OpenShift namespace
+make deploy openshift NAMESPACE=your-project-name
+
+# Remove deployment
+make undeploy openshift
+```
+
+### Deploying to Managed Platform (MPP)
+
+Deploy to Red Hat Managed Platform with tenant configuration:
+
+```bash
+# Deploy to MPP with tenant
+make deploy mpp TENANT=ask-data
+
+# Remove MPP deployment
+make undeploy mpp TENANT=ask-data
+```
+
 ### Verify Installation
 
 1. **Health check:**
