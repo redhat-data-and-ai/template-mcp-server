@@ -18,6 +18,9 @@ from template_mcp_server.src.tools.multiply_tool import (
 from template_mcp_server.src.tools.redhat_logo_tool import (
     get_redhat_logo,
 )
+from template_mcp_server.src.tools.xkcd_tool import (
+    get_xkcd_comic,
+)
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -59,8 +62,10 @@ class TemplateMCPServer:
         - multiply_numbers: Basic arithmetic operations
         - generate_code_review_prompt: Code review prompt generation
         - get_redhat_logo: Red Hat logo retrieval as base64
+        - get_xkcd_comic: XKCD comic fetcher
         """
         # Register all the imported tools
         self.mcp.tool()(multiply_numbers)
         self.mcp.tool()(generate_code_review_prompt)
         self.mcp.tool()(get_redhat_logo)
+        self.mcp.tool()(get_xkcd_comic)
