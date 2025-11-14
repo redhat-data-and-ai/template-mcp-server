@@ -1,0 +1,18 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: template-mcp-server
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+    shard: internal
+spec:
+  host: template-mcp-server.apps.int.spoke.preprod.us-west-2.aws.paas.redhat.com
+  to:
+    kind: Service
+    name: template-mcp-server
+  port:
+    targetPort: https
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect

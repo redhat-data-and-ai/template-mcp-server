@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-mcp-server
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: template-mcp-server
+      component: mcp-server
+  template:
+    metadata:
+      labels:
+        app: template-mcp-server
+        component: mcp-server
+    spec:
+      containers:
+        - name: template-mcp-server
+          image: template-mcp-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: MCP_HOST
+              value: "0.0.0.0"
+            - name: MCP_PORT
+              value: "8080"
+            - name: PYTHON_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: PYTHON_LOG_LEVEL
+            - name: MCP_TRANSPORT_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_TRANSPORT_PROTOCOL
+            - name: CORS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: CORS_ENABLED
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENVIRONMENT
+            - name: ENABLE_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENABLE_AUTH
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SESSION_SECRET
+            - name: SSO_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SSO_CLIENT_ID
+                  optional: true
+            - name: SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SSO_CLIENT_SECRET
+                  optional: true
+            - name: SSO_CALLBACK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_CALLBACK_URL
+                  optional: true
+            - name: SSO_AUTHORIZATION_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_AUTHORIZATION_URL
+                  optional: true
+            - name: SSO_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_TOKEN_URL
+                  optional: true
+            - name: SSO_INTROSPECTION_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_INTROSPECTION_URL
+                  optional: true
+            - name: MCP_HOST_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_HOST_ENDPOINT
+                  optional: true
+          envFrom:
+            - secretRef:
+                name: template-mcp-server-secrets
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      restartPolicy: Always

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: template-mcp-server-config
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+data:
+  PYTHON_LOG_LEVEL: "INFO"
+  MCP_TRANSPORT_PROTOCOL: "http"
+  CORS_ENABLED: "true"
+  ENVIRONMENT: "production"
+  ENABLE_AUTH: "true"
+  COMPATIBLE_WITH_CURSOR: "true"
+  SSO_CALLBACK_URL: "https://template-mcp-server.apps.int.spoke.preprod.us-west-2.aws.paas.redhat.com/auth/callback/oidc"
+  SSO_AUTHORIZATION_URL: "https://auth.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/auth"
+  SSO_TOKEN_URL: "https://auth.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/token"
+  SSO_INTROSPECTION_URL: "https://auth.redhat.com/auth/realms/EmployeeIDP/protocol/openid-connect/token/introspect"
+  MCP_HOST_ENDPOINT: "https://template-mcp-server.apps.int.spoke.preprod.us-west-2.aws.paas.redhat.com"

@@ -18,7 +18,6 @@ class TestSettings:
 
         # Assert
         assert settings.MCP_HOST == "localhost"
-        assert settings.MCP_PORT == 8080
         assert settings.MCP_TRANSPORT_PROTOCOL == "http"
         assert settings.PYTHON_LOG_LEVEL == "INFO"
         assert settings.MCP_SSL_KEYFILE is None

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: template-mcp-server-config
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+data:
+  PYTHON_LOG_LEVEL: "INFO"
+  MCP_TRANSPORT_PROTOCOL: "http"
+  CORS_ENABLED: "true"
+  ENVIRONMENT: "production"
+  ENABLE_AUTH: "false"
+  SSO_CALLBACK_URL: ""
+  SSO_AUTHORIZATION_URL: ""
+  SSO_TOKEN_URL: ""
+  SSO_INTROSPECTION_URL: ""
+  MCP_HOST_ENDPOINT: ""

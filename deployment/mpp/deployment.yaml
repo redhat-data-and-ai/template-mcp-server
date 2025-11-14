@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-mcp-server
+  labels:
+    app: template-mcp-server
+    component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: template-mcp-server
+      component: mcp-server
+  template:
+    metadata:
+      labels:
+        app: template-mcp-server
+        component: mcp-server
+    spec:
+      containers:
+        - name: template-mcp-server
+          image: template-mcp-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: MCP_HOST
+              value: "0.0.0.0"
+            - name: MCP_PORT
+              value: "8443"
+            - name: PYTHON_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: PYTHON_LOG_LEVEL
+            - name: MCP_TRANSPORT_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_TRANSPORT_PROTOCOL
+            - name: CORS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: CORS_ENABLED
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENVIRONMENT
+            - name: ENABLE_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENABLE_AUTH
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SESSION_SECRET
+            - name: SSO_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SSO_CLIENT_ID
+                  optional: true
+            - name: SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: SSO_CLIENT_SECRET
+                  optional: true
+            - name: SSO_CALLBACK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_CALLBACK_URL
+                  optional: true
+            - name: SSO_AUTHORIZATION_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_AUTHORIZATION_URL
+                  optional: true
+            - name: SSO_TOKEN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_TOKEN_URL
+                  optional: true
+            - name: SSO_INTROSPECTION_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: SSO_INTROSPECTION_URL
+                  optional: true
+            - name: MCP_HOST_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_HOST_ENDPOINT
+                  optional: true
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: template-mcp-server-secrets
+                  key: POSTGRES_PORT
+            - name: MCP_SSL_KEYFILE
+              value: '/run/secrets/tls/tls.key'
+            - name: MCP_SSL_CERTFILE
+              value: '/run/secrets/tls/tls.crt'
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /run/secrets/tls
+          envFrom:
+            - secretRef:
+                name: template-mcp-server-secrets
+                optional: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      restartPolicy: Always
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: template-mcp-server-tls

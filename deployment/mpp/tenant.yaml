@@ -1,0 +1,10 @@
+apiVersion: tenant.paas.redhat.com/v1alpha1
+kind: TenantNamespace
+metadata:
+  name: template
+  namespace: ask-data--config
+spec:
+  network:
+    security-zone: internal
+  rbac: all
+  type: runtime
