@@ -373,6 +373,88 @@ make undeploy mpp TENANT=ask-data
         -d '{"method": "tools/call", "params": {"name": "multiply_numbers", "arguments": {"a": 5, "b": 3}}}'
    ```
 
+## Template Customization
+
+Once you have the template MCP server running successfully, you can transform it into your own domain-specific MCP server using our automated transformation script.
+
+### Why Transform the Template?
+
+This template provides a solid foundation, but you'll want to customize it for your specific use case:
+- **Rename the project** to match your domain (e.g., `sales-analytics-mcp-server`)
+- **Update all code references** from `template_mcp_server` to your project name
+- **Customize the tools** for your specific business logic
+- **Deploy with your project branding** and configurations
+
+### Quick Transformation
+
+The fastest way to create your own MCP server is using our automated transformation script:
+
+#### Option 1: Download Script Only (Recommended)
+
+```bash
+# Download the transformation script to your workspace directory
+curl -O https://raw.githubusercontent.com/redhat-data-and-ai/template-mcp-server/main/scripts/transform-template.sh
+
+# Make it executable
+chmod +x transform-template.sh
+
+# Transform the template (it will clone automatically)
+./transform-template.sh "your-project-name"
+
+# Example: Create a sales analytics MCP server
+./transform-template.sh "sales-analytics-mcp-server"
+```
+
+#### Option 2: From Cloned Repository
+
+⚠️ **Important**: Run the script FROM OUTSIDE the template directory:
+
+```bash
+# Clone this template repository
+git clone https://github.com/redhat-data-and-ai/template-mcp-server.git
+
+# Run transformation script from your workspace directory (NOT inside the template)
+./template-mcp-server/scripts/transform-template.sh "your-project-name"
+```
+
+### What the Script Does
+
+The transformation script automatically:
+
+- ✅ **Renames all files and directories** with your project name
+- ✅ **Updates all code references** from `template_mcp_server` to your domain
+- ✅ **Modifies configuration files** (pyproject.toml, Containerfile, etc.)
+- ✅ **Updates documentation** (README, deployment configs)
+- ✅ **Preserves all functionality** (tests, tools, deployment configs)
+- ✅ **Creates a ready-to-use project** in a new directory
+
+### After Transformation
+
+⚠️ **Critical**: You MUST install dependencies after transformation:
+
+```bash
+cd your-project-name
+
+# Install dependencies (REQUIRED)
+make install
+
+# Verify everything works
+make test
+
+# Start your customized server
+make local
+```
+
+### Next Steps
+
+1. **Customize your tools** in `src/tools/` directory
+2. **Update the README** with your domain-specific information
+3. **Modify example tools** to match your use case
+4. **Add your own tests** for new functionality
+5. **Deploy** using the included container and deployment configs
+
+📚 **For detailed transformation documentation**, see [scripts/README.md](scripts/README.md)
+
 ## How to Test the Code Locally
 
 ### Development Environment Setup
