@@ -7,7 +7,7 @@ NAMESPACE ?= $(shell oc project -q 2>/dev/null)
 deps:
 	@which uv > /dev/null && echo "uv: $(shell uv --version)" || (echo "Error: uv not found. Please install uv." && exit 1)
 	@which podman > /dev/null && echo "podman: $(shell podman --version)" || (echo "Error: podman not found. Please install podman." && exit 1)
-	@which podman-compose > /dev/null && echo "podman-compose: $(shell podman-compose --version)" || (echo "Error: podman-compose not found. Please install podman-compose." && exit 1)
+	@podman compose version > /dev/null 2>&1 && echo "podman compose: $(shell podman compose version)" || (echo "Error: podman compose not found. Please install podman compose." && exit 1)
 	@which oc > /dev/null && echo "oc: $(shell oc version --client)" || (echo "Error: oc not found. Please install oc." && exit 1)
 
 # Install Python dependencies
@@ -47,7 +47,7 @@ local:
 
 container:
 	export PODMAN_COMPOSE_SILENT=true
-	podman-compose --no-ansi up --build --force-recreate --remove-orphans  --timeout=60
+	podman compose --no-ansi up --build --force-recreate --remove-orphans  --timeout=60
 
 # Deployment targets
 deploy:
