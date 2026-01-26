@@ -313,7 +313,7 @@ The server configuration is managed through environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MCP_HOST` | `0.0.0.0` | Server bind address |
-| `MCP_PORT` | `3000` | Server port (1024-65535) |
+| `MCP_PORT` | `5001` | Server port (1024-65535) |
 | `MCP_TRANSPORT_PROTOCOL` | `streamable-http` | Transport protocol (`http`, `sse`, `streamable-http`) |
 | `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
 | `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
@@ -329,7 +329,7 @@ The server configuration is managed through environment variables:
 2. **Or build manually:**
    ```bash
    podman build -t template-mcp-server .
-   podman run -p 3000:3000 --env-file .env template-mcp-server
+   podman run -p 5001:5001 --env-file .env template-mcp-server
    ```
 
 ### Deploying to OpenShift
@@ -362,16 +362,45 @@ make undeploy mpp TENANT=ask-data
 
 1. **Health check:**
    ```bash
-   curl http://localhost:3000/health
+   curl http://localhost:5001/health
    ```
 
 2. **Test MCP tools:**
    ```bash
    # Test multiply tool via MCP endpoint
-   curl -X POST "http://localhost:3000/mcp" \
+   curl -X POST "http://localhost:5001/mcp" \
         -H "Content-Type: application/json" \
         -d '{"method": "tools/call", "params": {"name": "multiply_numbers", "arguments": {"a": 5, "b": 3}}}'
    ```
+
+## 🤖 AI IDE Instructions (ex. Cursor, Copilot)
+
+**Context for AI:** This project uses `uv` for dependency management and runs a FastMCP server on port 5001. AI agents often fail to restart this server correctly by leaving the old process running.
+
+**⚠️ CRITICAL PROTOCOL: Restarting the Server**
+When asked to "restart the server" or "test my changes", you **MUST** follow this exact sequence to avoid `Address already in use` errors:
+
+1.  **Detect Port (Shell Method)**:
+    * Do not try to read `.env` directly (it is hidden).
+    * Run this command to find the configured port:
+      `grep MCP_PORT .env`
+    * Extract the number (e.g., 5001) from the output.
+1.  **Identify Zombie Processes**:
+    * Check for any process holding port 5001.
+    * *Command*: `lsof -ti:5001` (macOS/Linux) or `netstat -ano | findstr :5001` (Windows).
+2.  **Force Kill**:
+    * Do not rely on standard `SIGINT` (Ctrl+C).
+    * If a PID is found in step 1, kill it immediately.
+    * *Command*: `kill -9 <PID>` (macOS/Linux) or `taskkill /PID <PID> /F` (Windows).
+3.  **Verify Cleanup**:
+    * Run the check command from Step 1 again to confirm the port is free.
+4.  **Start Fresh**:
+    * Use `uv` to run the server.
+    * *Command*: `uv run python -m template_mcp_server.src.main`
+
+**Verification**
+After starting, verify the server is active by querying the health endpoint:
+* *Command*: `curl http://localhost:5001/health`
 
 ## How to Test the Code Locally
 
@@ -502,13 +531,13 @@ The project includes a comprehensive test suite with the following structure:
 1. **Container testing:**
    ```bash
    docker-compose up -d
-   curl -f http://localhost:3000/health
+   curl -f http://localhost:5001/health
    docker-compose down
    ```
 
 2. **SSL testing (if configured):**
    ```bash
-   curl -k https://localhost:3000/health
+   curl -k https://localhost:5001/health
    ```
 
 ## Continuous Integration & Deployment
