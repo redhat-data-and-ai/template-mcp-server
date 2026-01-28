@@ -247,6 +247,26 @@ template-mcp-server/
 - Python 3.12 or higher
 - [uv](https://docs.astral.sh/uv/) (fast Python package installer and resolver)
 
+### Quick Start - Create Your Own MCP Server by using Automated Template Transformation
+
+🚀 **Want to create your own domain-specific MCP server from this template?** Use our automated transformation script!
+
+The fastest way to create your own MCP server is to use our transformation script. Download Script Only (Recommended)
+
+```bash
+# Download the transformation script to your workspace directory
+curl -O https://raw.githubusercontent.com/redhat-data-and-ai/template-mcp-server/refs/heads/main/transform-template.sh
+
+# Make it executable
+chmod +x transform-template.sh
+
+# Run it (it will clone the template automatically)
+./transform-template.sh "your-project-name"
+
+# Example: Create a sales territory MCP server
+./transform-template.sh "sales-territory-mcp-server"
+```
+
 ### Setup
 
 1. **Install uv (if not already installed):**
