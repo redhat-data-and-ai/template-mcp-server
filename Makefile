@@ -45,6 +45,11 @@ local:
 	@echo "Press Ctrl+C to stop the server"
 	@. .venv/bin/activate && python -m template_mcp_server.src.main
 
+kill:
+	@echo "Stopping MCP server..."
+	@pkill -9 -f "python -m template_mcp_server.src.main" || echo "No MCP server process found"
+	@echo "MCP server stopped"
+
 container:
 	export PODMAN_COMPOSE_SILENT=true
 	podman compose --no-ansi up --build --force-recreate --remove-orphans  --timeout=60

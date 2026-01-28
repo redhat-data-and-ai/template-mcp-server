@@ -313,7 +313,7 @@ The server configuration is managed through environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MCP_HOST` | `0.0.0.0` | Server bind address |
-| `MCP_PORT` | `3000` | Server port (1024-65535) |
+| `MCP_PORT` | `5001` | Server port (1024-65535) |
 | `MCP_TRANSPORT_PROTOCOL` | `streamable-http` | Transport protocol (`http`, `sse`, `streamable-http`) |
 | `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
 | `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
@@ -329,7 +329,7 @@ The server configuration is managed through environment variables:
 2. **Or build manually:**
    ```bash
    podman build -t template-mcp-server .
-   podman run -p 3000:3000 --env-file .env template-mcp-server
+   podman run -p 5001:5001 --env-file .env template-mcp-server
    ```
 
 ### Deploying to OpenShift
@@ -362,13 +362,13 @@ make undeploy mpp TENANT=ask-data
 
 1. **Health check:**
    ```bash
-   curl http://localhost:3000/health
+   curl http://localhost:5001/health
    ```
 
 2. **Test MCP tools:**
    ```bash
    # Test multiply tool via MCP endpoint
-   curl -X POST "http://localhost:3000/mcp" \
+   curl -X POST "http://localhost:5001/mcp" \
         -H "Content-Type: application/json" \
         -d '{"method": "tools/call", "params": {"name": "multiply_numbers", "arguments": {"a": 5, "b": 3}}}'
    ```
@@ -502,13 +502,13 @@ The project includes a comprehensive test suite with the following structure:
 1. **Container testing:**
    ```bash
    docker-compose up -d
-   curl -f http://localhost:3000/health
+   curl -f http://localhost:5001/health
    docker-compose down
    ```
 
 2. **SSL testing (if configured):**
    ```bash
-   curl -k https://localhost:3000/health
+   curl -k https://localhost:5001/health
    ```
 
 ## Continuous Integration & Deployment
