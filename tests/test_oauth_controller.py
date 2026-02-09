@@ -87,9 +87,11 @@ class TestOAuthControllerHandleCallback:
             # Create mock OAuth service
             oauth_service = AsyncMock(spec=OAuthService)
 
-            # Should raise AttributeError when trying to access missing session data
-            with pytest.raises(AttributeError):
+            # Should raise HTTPException when session data is missing
+            with pytest.raises(HTTPException) as exc_info:
                 await controller.handle_callback(mock_request, oauth_service)
+            assert exc_info.value.status_code == 400
+            assert exc_info.value.detail["error"] == "invalid_request"
 
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio

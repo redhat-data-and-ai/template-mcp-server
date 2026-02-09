@@ -1,0 +1,34 @@
+# Code Owners for Template MCP Server
+#
+# These owners are automatically requested for review when a PR touches
+# the matching file paths. Order matters: later rules take precedence.
+#
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+*                                       @redhat-data-and-ai/mcp-maintainers
+
+# Core server implementation
+template_mcp_server/src/main.py         @redhat-data-and-ai/mcp-maintainers
+template_mcp_server/src/api.py          @redhat-data-and-ai/mcp-maintainers
+template_mcp_server/src/mcp.py          @redhat-data-and-ai/mcp-maintainers
+template_mcp_server/src/settings.py     @redhat-data-and-ai/mcp-maintainers
+
+# OAuth and security
+template_mcp_server/src/oauth/          @redhat-data-and-ai/mcp-maintainers
+
+# Storage layer
+template_mcp_server/src/storage/        @redhat-data-and-ai/mcp-maintainers
+
+# Tools (broader ownership for contributions)
+template_mcp_server/src/tools/          @redhat-data-and-ai/mcp-maintainers
+
+# CI/CD and infrastructure
+.github/                                @redhat-data-and-ai/mcp-maintainers
+deployment/                             @redhat-data-and-ai/mcp-maintainers
+Containerfile                           @redhat-data-and-ai/mcp-maintainers
+compose.yaml                            @redhat-data-and-ai/mcp-maintainers
+Makefile                                @redhat-data-and-ai/mcp-maintainers
+
+# Documentation
+*.md                                    @redhat-data-and-ai/mcp-maintainers

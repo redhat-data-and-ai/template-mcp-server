@@ -270,7 +270,7 @@ async def health_check():
 
 def get_host() -> str:
     """Determine the HOST for OAuth discovery endpoints."""
-    safe_default = "http://localhost:8080"
+    safe_default = "http://localhost:5001"
     endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or safe_default
     try:
         callback_uri = urlparse(endpoint)

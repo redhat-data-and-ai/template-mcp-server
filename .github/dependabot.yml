@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  # Python dependencies (pip)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "type/dependency"
+      - "area/python"
+    commit-message:
+      prefix: "build(deps):"
+    reviewers:
+      - "redhat-data-and-ai/mcp-maintainers"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "type/dependency"
+      - "area/ci"
+    commit-message:
+      prefix: "ci(deps):"
+    reviewers:
+      - "redhat-data-and-ai/mcp-maintainers"

@@ -10,8 +10,19 @@ name = "template-mcp-server"
 version = "0.1.0"
 description = "A template for Model Context Protocol (MCP) server development"
 readme = "README.md"
-keywords = ["mcp", "template", "server"]
-requires-python = "==3.12.2"
+license = {text = "Apache-2.0"}
+keywords = ["mcp", "template", "server", "fastmcp", "fastapi"]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
 dependencies = [
     "fastmcp==2.10.4",
     "httpx==0.28.1",
@@ -36,10 +47,12 @@ dev = [
     "mypy==1.16.1",
     "pre-commit==4.2.0",
     "httpx==0.28.1",
-    "langchain-google-genai ==2.1.8",
+    "langchain-google-genai==2.1.8",
     "langchain_mcp_adapters==0.1.8",
     "langgraph==0.5.4",
-    "bandit==1.8.6"
+    "bandit==1.8.6",
+    "safety",
+    "pydocstyle"
 ]
 
 [project.scripts]
@@ -49,11 +62,12 @@ template-mcp-server = "template_mcp_server.src.main:main"
 Homepage = "https://github.com/redhat-data-and-ai/template-mcp-server"
 Repository = "https://github.com/redhat-data-and-ai/template-mcp-server"
 Issues = "https://github.com/redhat-data-and-ai/template-mcp-server/issues"
+Changelog = "https://github.com/redhat-data-and-ai/template-mcp-server/releases"
 
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-lint.select = ["E", "W", "F", "I", "F401"]
+lint.select = ["E", "W", "F", "I"]
 lint.ignore = ["E501"]
 
 [tool.ruff.format]
@@ -61,7 +75,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["template_mcp_server"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -86,10 +100,11 @@ addopts = [
     "--strict-markers",
     "--strict-config",
 ]
+asyncio_mode = "auto"
 markers = ["asyncio"]
 
 [tool.coverage.run]
-source = ["src"]
+source = ["template_mcp_server"]
 omit = [
     "*/tests/*",
     "*/test_*",

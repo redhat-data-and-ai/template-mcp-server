@@ -153,7 +153,7 @@ async def get_agent_redhat():
     client = MultiServerMCPClient(
         {
             "template_mcp_server": {
-                "url": "http://0.0.0.0:8080/mcp/",
+                "url": "http://localhost:5001/mcp/",
                 "transport": "streamable_http",
             },
         }

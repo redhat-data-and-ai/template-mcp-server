@@ -26,10 +26,12 @@ services:
       dockerfile: Containerfile
     container_name: template-mcp-server
     ports:
-      - "8080:8080"
+      - "5001:5001"
     env_file:
       - .env
     environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=5001
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=postgres
@@ -40,7 +42,7 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
-      test: [ "CMD", "curl", "-f", "-k", "http://0.0.0.0:8080/health"]
+      test: [ "CMD", "curl", "-f", "-k", "http://0.0.0.0:5001/health"]
       interval: 5s
       timeout: 5s
       retries: 5

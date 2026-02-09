@@ -1,0 +1,28 @@
+{
+  "name": "Template MCP Server",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv pip install -e '.[dev]' && pre-commit install && cp -n .env.example .env 2>/dev/null || true",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        }
+      },
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "ms-python.mypy-type-checker",
+        "ms-python.debugpy",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  },
+  "forwardPorts": [5001],
+  "containerEnv": {
+    "PYTHONPATH": "${containerWorkspaceFolder}"
+  }
+}
