@@ -163,6 +163,14 @@ class Settings(BaseSettings):
             "description": "SSO token introspection endpoint URL",
         },
     )
+    SSO_SCOPES: str = Field(
+        default="email,openid,profile,session:role-any",
+        json_schema_extra={
+            "env": "SSO_SCOPES",
+            "description": "Comma-separated OAuth scopes to request (e.g. email,openid,profile for Google)",
+            "example": "email,openid,profile",
+        },
+    )
     SESSION_SECRET: Optional[str] = Field(
         default=None,
         json_schema_extra={
