@@ -93,6 +93,39 @@ class TestOAuthControllerHandleCallback:
             assert exc_info.value.status_code == 400
             assert exc_info.value.detail["error"] == "invalid_request"
 
+    @pytest.mark.asyncio
+    async def test_handle_callback_missing_code_param(self):
+        """Test callback handling when code or state query param is missing."""
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": None,
+            "state": "state_123",
+        }.get(key)
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await controller.handle_callback(mock_request, oauth_service)
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["error"] == "invalid_request"
+        assert "Missing code or state parameter" in exc_info.value.detail["error_description"]
+
+    @pytest.mark.asyncio
+    async def test_handle_callback_missing_state_param(self):
+        """Test callback handling when state query param is missing."""
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": "auth_code_123",
+            "state": None,
+        }.get(key)
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await controller.handle_callback(mock_request, oauth_service)
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["error"] == "invalid_request"
+
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
     async def test_handle_callback_local_development(self, mock_settings):
