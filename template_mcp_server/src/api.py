@@ -270,8 +270,7 @@ async def health_check():
 
 def get_host() -> str:
     """Determine the HOST for OAuth discovery endpoints."""
-    safe_default = "http://localhost:8080"
-    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or safe_default
+    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) 
     try:
         callback_uri = urlparse(endpoint)
         # Validate that scheme and netloc are present and scheme is http or https
