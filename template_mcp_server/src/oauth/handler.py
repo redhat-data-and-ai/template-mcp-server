@@ -18,7 +18,11 @@ from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
-SCOPE = ["email", "openid", "profile", "session:role-any"]
+
+def _get_scope() -> list:
+    """Resolve OAuth scope from settings.SSO_SCOPES (comma-separated)."""
+    raw = settings.SSO_SCOPES or ""
+    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 class OAuth2Handler:
@@ -29,7 +33,7 @@ class OAuth2Handler:
         """Create an OAuth2 session with the specified state."""
         return OAuth2Session(
             settings.SSO_CLIENT_ID,
-            scope=SCOPE,
+            scope=_get_scope(),
             redirect_uri=settings.SSO_CALLBACK_URL,
             state=state,
         )
