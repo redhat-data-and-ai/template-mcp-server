@@ -27,6 +27,30 @@ make deploy openshift NAMESPACE=your-project-name
 make undeploy openshift
 ```
 
+### PostgreSQL Requirement
+
+The OpenShift manifests **do not include a PostgreSQL deployment**. If you enable authentication (`ENABLE_AUTH=True`), you must provision PostgreSQL separately and point the `POSTGRES_*` values in `deployment/openshift/secret.yaml` to it.
+
+Common approaches:
+
+| Option | When to Use |
+|--------|------------|
+| [CrunchyData Postgres Operator](https://access.crunchydata.com/documentation/postgres-operator/latest/) | Recommended for OpenShift — operator-managed, HA-ready |
+| Managed cloud DB (RDS, Cloud SQL, Azure DB) | Hybrid deployments or when the cluster is not self-hosted |
+| Standalone PostgreSQL Pod | Quick testing only — not recommended for production |
+
+Update these values in `deployment/openshift/secret.yaml` before deploying:
+
+```yaml
+POSTGRES_DB: "your-db-name"
+POSTGRES_USER: "your-db-user"
+POSTGRES_PASSWORD: "your-secure-password"
+```
+
+The MCP server also needs `POSTGRES_HOST` and `POSTGRES_PORT` — set these in `deployment/openshift/configmap.yaml` to match your database endpoint.
+
+> **Without auth:** If `ENABLE_AUTH=False`, PostgreSQL is not required and the `POSTGRES_*` values are ignored.
+
 ## Container Build (`Containerfile`)
 
 The `Containerfile` uses a multi-stage approach on a Red Hat UBI base:
