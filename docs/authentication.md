@@ -266,3 +266,11 @@ The code default for `ENABLE_AUTH` is `True`. If you delete or skip the `.env` f
 ```bash
 cp .env.example .env
 ```
+
+## FAQ
+
+| Question | Answer |
+|----------|--------|
+| Does the server auto-refresh tokens on a timer? | No — the server implements the `refresh_token` grant at `POST /auth/token`, but the **client** is responsible for calling it before the token expires. |
+| What does PostgreSQL store? | Only OAuth data: registered clients, authorization codes, access tokens, and refresh tokens. No business data. |
+| Is PostgreSQL required when auth is disabled? | No — if `ENABLE_AUTH=False`, PostgreSQL is not used. |
