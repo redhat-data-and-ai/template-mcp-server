@@ -3,10 +3,13 @@
 
 This example demonstrates how to connect to the running template MCP server
 using the FastMCP Client and make actual MCP protocol calls.
+
+Prerequisites:
+- Template MCP server must be running on http://localhost:5001
+- Install dependencies: pip install fastmcp httpx requests
 """
 
 import asyncio
-import json
 
 import requests
 from fastmcp import Client
@@ -35,20 +38,20 @@ class FastMCPClient:
             response = requests.get(self.health_endpoint, timeout=10)
             if response.status_code == 200:
                 health_data = response.json()
-                print("✅ MCP Server is healthy!")
+                print("Server is healthy")
                 print(f"   Service: {health_data.get('service')}")
                 print(f"   Transport Protocol: {health_data.get('transport_protocol')}")
                 print(f"   Version: {health_data.get('version')}")
                 return True
             else:
-                print(f"❌ MCP Server health check failed: {response.status_code}")
+                print(f"Health check failed: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Error connecting to MCP server: {e}")
+            print(f"Error connecting to MCP server: {e}")
             return False
 
     async def demonstrate_tools(self, client):
-        """Demonstrate the available tools using actual MCP calls."""
+        """Demonstrate all available tools using actual MCP calls."""
         print("\n" + "=" * 60)
         print("Available MCP Tools")
         print("=" * 60)
@@ -59,61 +62,29 @@ class FastMCPClient:
             print(f"Found {len(tools)} tool(s):")
             for tool in tools:
                 print(f"   - {tool.name}: {tool.description}")
-                print(f"     Arguments: {tool.inputSchema}")
 
-            # Test multiply tool
-            print("\n🔧 Testing multiply_numbers tool:")
+            # Test multiply_numbers
+            print("\n--- multiply_numbers ---")
             result = await client.call_tool("multiply_numbers", {"a": 15, "b": 7})
-            print(f"   Result: {result}")
+            print(f"   15 * 7 = {result}")
 
-        except Exception as e:
-            print(f"   Error accessing tools: {e}")
-
-    async def demonstrate_resources(self, client):
-        """Demonstrate the available resources using actual MCP calls."""
-        print("\n" + "=" * 60)
-        print("Available MCP Resources")
-        print("=" * 60)
-
-        try:
-            # List available resources
-            resources = await client.list_resources()
-            print(f"Found {len(resources)} resource(s):")
-            for resource in resources:
-                print(f"   - {resource.name}: {resource.description}")
-                print(f"     URI: {resource.uri}")
-
-            # Test Red Hat logo resource
-            print("\n📁 Testing Red Hat logo resource:")
-            result = await client.read_resource("resource://redhat-logo")
-            print(f"   Result: {json.loads(result[0].text)['text'][:100]}")
-
-        except Exception as e:
-            print(f"   Error accessing resources: {e}")
-
-    async def demonstrate_prompts(self, client):
-        """Demonstrate the available prompts using actual MCP calls."""
-        print("\n" + "=" * 60)
-        print("Available MCP Prompts")
-        print("=" * 60)
-
-        try:
-            # List available prompts
-            prompts = await client.list_prompts()
-            print(f"Found {len(prompts)} prompt(s):")
-            for prompt in prompts:
-                print(f"   - {prompt.name}: {prompt.description}")
-
-            # Test code review prompt
-            print("\n💬 Testing code review prompt:")
-            result = await client.get_prompt(
-                "get_code_review_prompt",
+            # Test generate_code_review_prompt
+            print("\n--- generate_code_review_prompt ---")
+            result = await client.call_tool(
+                "generate_code_review_prompt",
                 {"code": "def add(a, b): return a + b", "language": "python"},
             )
             print(f"   Result: {result}")
 
+            # Test get_redhat_logo
+            print("\n--- get_redhat_logo ---")
+            result = await client.call_tool("get_redhat_logo", {})
+            # The logo returns base64 data; just confirm it worked
+            print(f"   Result type: {type(result)}")
+            print("   Logo data received successfully")
+
         except Exception as e:
-            print(f"   Error accessing prompts: {e}")
+            print(f"   Error accessing tools: {e}")
 
     async def run_demo(self):
         """Run the complete demo using FastMCP Client."""
@@ -122,7 +93,7 @@ class FastMCPClient:
 
         # Check server health
         if not self.check_server_health():
-            print("❌ Cannot proceed without a healthy MCP server")
+            print("Cannot proceed without a healthy MCP server")
             return
 
         # Create MCP client
@@ -130,21 +101,15 @@ class FastMCPClient:
 
         try:
             async with client:
-                print("✅ Connected to MCP server")
+                print("Connected to MCP server")
 
-                # Demonstrate capabilities
+                # Demonstrate all tools
                 await self.demonstrate_tools(client)
-                await self.demonstrate_resources(client)
-                await self.demonstrate_prompts(client)
 
-                print("\n✅ Demo completed successfully!")
-                print("\nThis demonstrates actual MCP protocol calls for:")
-                print("- Tools for mathematical operations")
-                print("- Resources for file and asset access")
-                print("- Prompts for code review and analysis")
+                print("\nDemo completed successfully!")
 
         except Exception as e:
-            print(f"❌ Error during demo: {e}")
+            print(f"Error during demo: {e}")
 
 
 async def main():
@@ -152,8 +117,8 @@ async def main():
     # Test MCP server deployed locally
     demo = FastMCPClient(server_url="http://localhost:5001")
 
-    # Test MCP server deployed on openshift
-    # demo = FastMCPClient(server_url="https://template-mcp-server.apps.int.spoke.preprod.us-west-2.aws.paas.redhat.com")
+    # Test MCP server deployed on OpenShift
+    # demo = FastMCPClient(server_url="https://your-mcp-server.apps.example.com")
     await demo.run_demo()
 
 

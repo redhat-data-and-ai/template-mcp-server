@@ -30,8 +30,8 @@ graph TB
 
         subgraph "Tool Layer"
             L[Mathematical Tools<br/>multiply_numbers]
-            M[Resource Tools<br/>redhat_logo]
-            N[Prompt Tools<br/>code_review_prompt]
+            M[Logo Tool<br/>get_redhat_logo]
+            N[Code Review Tool<br/>generate_code_review_prompt]
             O[Custom Tools<br/>Extensible]
         end
 
@@ -124,8 +124,8 @@ flowchart TD
     J --> K{Which Tool?}
 
     K -->|multiply_numbers| L[Multiply Tool<br/>multiply_tool.py]
-    K -->|read_redhat_logo_content| M[Logo Resource Tool<br/>redhat_logo.py]
-    K -->|get_code_review_prompt| N[Code Review Prompt<br/>code_review_tool.py]
+    K -->|get_redhat_logo| M[Logo Tool<br/>redhat_logo_tool.py]
+    K -->|generate_code_review_prompt| N[Code Review Tool<br/>code_review_tool.py]
 
     L --> O[Validate Input<br/>Check numeric types]
     M --> P[Read Asset File<br/>Base64 encode PNG]
@@ -236,7 +236,6 @@ template-mcp-server/
 ├── CONTRIBUTING.md              # Contribution guide
 ├── SECURITY.md                  # Security policy
 ├── CHANGELOG.md                 # Release history
-├── CODEOWNERS                   # Review assignment
 ├── LICENSE                      # Apache 2.0
 └── README.md                    # Project documentation
 ```
@@ -253,5 +252,5 @@ template-mcp-server/
 ## Current MCP Tools
 
 1. **`multiply_numbers`**: Demonstrates basic arithmetic operations with error handling
-2. **`read_redhat_logo_content`**: Shows resource access patterns with base64 encoding
-3. **`get_code_review_prompt`**: Illustrates prompt generation for code analysis
+2. **`get_redhat_logo`**: Shows resource access patterns with base64 encoding
+3. **`generate_code_review_prompt`**: Illustrates prompt generation for code analysis
