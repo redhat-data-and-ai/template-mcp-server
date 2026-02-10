@@ -247,6 +247,8 @@ template-mcp-server/
 - **`mcp.py`**: Core MCP server class that registers tools using FastMCP decorators
 - **`settings.py`**: Environment-based configuration using Pydantic BaseSettings with validation
 - **`tools/`**: MCP tool implementations demonstrating arithmetic, prompts, and resource access patterns
+- **`oauth/`**: OAuth 2.0 integration — controller, handler, models, routes, service (see [Authentication Guide](authentication.md))
+- **`storage/storage_service.py`**: PostgreSQL-backed `StorageService` for persistent token and client storage. Used by the OAuth layer to store authorization codes, access tokens, refresh tokens, and registered clients. Requires PostgreSQL when auth is enabled; initialized at server startup via `oauth/service.py`
 - **`utils/pylogger.py`**: Structured JSON logging using structlog with comprehensive processors
 
 ## Current MCP Tools

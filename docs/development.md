@@ -4,6 +4,8 @@
 
 - Python 3.12 or higher
 - [uv](https://docs.astral.sh/uv/) (fast Python package installer and resolver)
+- make (macOS: `xcode-select --install`, Linux: `sudo apt install make` or `sudo dnf install make`)
+- [Podman](https://podman.io/docs/installation) and [podman-compose](https://github.com/containers/podman-compose#installation) (required for containerized deployment and local PostgreSQL)
 
 ## Setup
 
@@ -40,10 +42,10 @@
    .venv\Scripts\activate
    ```
 
-4. **Install the package and dependencies:**
+4. **Install the package and development dependencies:**
    ```bash
-   # Install in editable mode with all dependencies
-   uv pip install -e .
+   # Install in editable mode with dev dependencies (pytest, ruff, mypy, pre-commit, etc.)
+   uv pip install -e ".[dev]"
    ```
 
 5. **Configure environment variables:**
@@ -73,9 +75,20 @@ The server configuration is managed through environment variables:
 | `MCP_HOST` | `localhost` | Server bind address |
 | `MCP_PORT` | `5001` | Server port (1024-65535) |
 | `MCP_TRANSPORT_PROTOCOL` | `http` | Transport protocol (`http`, `sse`, `streamable-http`) |
+| `MCP_HOST_ENDPOINT` | `http://localhost:5001` | Public-facing host URL (used in OAuth discovery responses) |
 | `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
 | `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
 | `PYTHON_LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
+| `ENVIRONMENT` | `development` | Deployment environment identifier |
+| `ENABLE_AUTH` | `True`* | Enable OAuth authentication (see [Auth Guide](authentication.md)) |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False` | Browser-based OAuth for local dev |
+| `COMPATIBLE_WITH_CURSOR` | `False` | Cursor IDE OAuth2 compatibility mode |
+| `CORS_ENABLED` | `False` | Enable CORS middleware |
+| `CORS_ORIGINS` | `["*"]` | Allowed CORS origins |
+
+*\* `ENABLE_AUTH` defaults to `True` in code but `False` in `.env.example`. Always copy `.env.example` to `.env`.*
+
+See the [Authentication Guide](authentication.md) for the full list of `SSO_*` and `POSTGRES_*` variables.
 
 ## Authentication
 
@@ -105,15 +118,12 @@ By default, `.env.example` ships with `ENABLE_AUTH=False` so you can start devel
 
 ### Development Environment Setup
 
-1. **Install development dependencies:**
-   ```bash
-   uv pip install -e ".[dev]"
-   ```
+If you followed the [Setup](#setup) steps above, dev dependencies and pre-commit hooks are already installed. Otherwise:
 
-2. **Install pre-commit hooks:**
-   ```bash
-   pre-commit install
-   ```
+```bash
+uv pip install -e ".[dev]"
+pre-commit install
+```
 
 ### Test Commands
 

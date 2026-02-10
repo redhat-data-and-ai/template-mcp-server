@@ -52,7 +52,7 @@ Before enabling auth, you need:
 4. **PostgreSQL** — the server stores OAuth tokens in PostgreSQL. Use the included `compose.yaml` to run one locally:
 
    ```bash
-   docker compose up -d postgres
+   podman compose up -d postgres
    ```
 
 ## Local Development With Auth
@@ -156,6 +156,70 @@ SSO_INTROSPECTION_URL=https://sso.example.com/realms/myrealm/protocol/openid-con
 | `POSTGRES_USER`             | Auth enabled  | `None`  | PostgreSQL username                             |
 | `POSTGRES_PASSWORD`         | Auth enabled  | `None`  | PostgreSQL password                             |
 
+## Cursor IDE Integration
+
+When connecting to this server from [Cursor](https://cursor.com/), set `COMPATIBLE_WITH_CURSOR=True` in your `.env` file.
+
+### What it changes
+
+Cursor's MCP client does not send `client_id` in the token request body, and it does not support PKCE (`code_verifier`). With `COMPATIBLE_WITH_CURSOR=True`, the server:
+
+- Makes `client_id` **optional** in token request models (instead of required)
+- **Skips PKCE verification** during the authorization code exchange
+- **Skips client credential validation** in the refresh token and client credentials grant flows
+
+This allows Cursor to complete the OAuth flow without modification on the client side.
+
+### Configuration
+
+```bash
+# .env
+COMPATIBLE_WITH_CURSOR=True
+ENABLE_AUTH=True
+USE_EXTERNAL_BROWSER_AUTH=True   # or False for production
+```
+
+> **Security note:** `COMPATIBLE_WITH_CURSOR=True` relaxes validation. Use it only for local development with Cursor, not in production.
+
+## Discovery Endpoints
+
+When auth is enabled, the server exposes two [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414) discovery endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /.well-known/oauth-protected-resource` | Returns resource server metadata (resource identifier, authorization servers, supported token types) |
+| `GET /.well-known/oauth-authorization-server` | Returns authorization server metadata (issuer, endpoints, grant types, response types, code challenge methods) |
+
+These endpoints are **always public** (no token required) and return JSON. MCP clients that support OAuth discovery can use them to auto-configure authentication.
+
+Example:
+
+```bash
+curl http://localhost:5001/.well-known/oauth-authorization-server
+```
+
+## Customizing the OAuth Flow
+
+The OAuth implementation lives in `template_mcp_server/src/oauth/` with these components:
+
+| File | Purpose |
+|---|---|
+| `models.py` | Pydantic models for token requests, client registration, authorization |
+| `handler.py` | Low-level OAuth2 operations (authorization URLs, token exchange, PKCE) |
+| `controller.py` | Business logic for each grant type (auth code, refresh, client credentials) |
+| `routes.py` | FastAPI route definitions (`/auth/authorize`, `/auth/token`, `/auth/register`, etc.) |
+| `service.py` | OAuth service initialization and storage integration |
+
+### Common customization points
+
+**Adding scopes** — modify the scope validation in `controller.py` and the discovery metadata in `api.py`.
+
+**Changing token lifetime** — adjust the token TTL in `controller.py` where access tokens are generated.
+
+**Replacing the token store** — the default store is PostgreSQL via `StorageService`. To use a different backend, implement the same interface and update `service.py`.
+
+**Adding a new grant type** — add a handler in `controller.py`, wire it in `routes.py`, and add the grant type to the discovery metadata in `api.py`.
+
 ## Troubleshooting
 
 ### 401 Unauthorized on tool calls
@@ -192,7 +256,7 @@ When `USE_EXTERNAL_BROWSER_AUTH=True`, the server calls `webbrowser.open()`. Thi
 Auth modes require PostgreSQL for token storage. Ensure PostgreSQL is running:
 
 ```bash
-docker compose up -d postgres
+podman compose up -d postgres
 ```
 
 ### "ENABLE_AUTH defaults to True" surprise

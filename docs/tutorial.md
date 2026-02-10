@@ -2,6 +2,8 @@
 
 Build and register a custom MCP tool from scratch. By the end you will have a working `greet_user` tool that any MCP client can discover and call.
 
+> **Note:** The `greet_user` tool in this tutorial is a hands-on exercise for you to build. It is **not** included in the template — the template ships with `multiply_numbers`, `generate_code_review_prompt`, and `get_redhat_logo`. Follow along to learn the pattern, then delete or keep it as you wish.
+
 **Prerequisites** -- the server runs locally:
 
 ```bash
