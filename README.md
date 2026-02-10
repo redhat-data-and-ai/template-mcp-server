@@ -25,11 +25,26 @@ The template includes three example MCP tools: a multiply calculator, a code rev
 ## Quick Start
 
 ```bash
-# Clone and install
 git clone https://github.com/redhat-data-and-ai/template-mcp-server
 cd template-mcp-server
+make install        # creates venv, installs deps + pre-commit hooks
+make local          # starts server on localhost:5001
+```
+
+Verify in another terminal:
+
+```bash
+curl http://localhost:5001/health
+```
+
+<details>
+<summary>Manual setup (without Make)</summary>
+
+```bash
+# Create venv and install
 uv venv && source .venv/bin/activate
-uv pip install -e .
+uv pip install -e ".[dev]"
+pre-commit install
 
 # Configure and run
 cp .env.example .env
@@ -38,6 +53,8 @@ template-mcp-server
 # Verify
 curl http://localhost:5001/health
 ```
+
+</details>
 
 ## How to Use This Template
 
@@ -69,7 +86,6 @@ After creating your project, replace all references to `template-mcp-server` and
 | `compose.yaml`         | `container_name`, service name, healthcheck URL                                       |
 | `deployment/`          | App labels, image names, route names in all manifests                                   |
 | `.github/workflows/`   | Badge URLs in `README.md`, Codecov flags                                              |
-| `CODEOWNERS`           | Team names and file paths                                                               |
 | `README.md`            | Title, badges, clone URL, description                                                   |
 | `.env.example`         | Adjust defaults if your server uses a different port or protocol                        |
 
