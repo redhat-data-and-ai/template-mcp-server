@@ -8,12 +8,12 @@
 
 A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
 
-The template includes three example MCP tools: a multiply calculator, a code review prompt generator, and a Red Hat logo resource handler. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
+The template includes three example MCP tools: a multiply calculator, a code review prompt generator, and a Red Hat logo tool. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
 
 ## Features
 
 - **FastMCP + FastAPI** with multiple transport protocols (HTTP, SSE, streamable-HTTP)
-- **Three example tools**: multiply calculator, code review prompt, Red Hat logo resource
+- **Three example tools**: multiply calculator, code review prompt, Red Hat logo
 - **Pydantic configuration** via environment variables
 - **Structured JSON logging** with structlog
 - **SSL/TLS support** for secure deployments
@@ -77,17 +77,17 @@ git init
 
 After creating your project, replace all references to `template-mcp-server` and `template_mcp_server` with your project name. The following files require updates:
 
-| File / Directory         | What to Change                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------- |
-| `template_mcp_server/` | Rename the package directory (e.g.,`my_mcp_server/`)                                  |
-| `pyproject.toml`       | `name`, `project.scripts` entry, `[project.urls]`, `[tool.coverage.run] source` |
-| `Makefile`             | References in `lint`, `local`, and deployment targets                               |
-| `Containerfile`        | `COPY` source path and `CMD` module path                                            |
-| `compose.yaml`         | `container_name`, service name, healthcheck URL                                       |
-| `deployment/`          | App labels, image names, route names in all manifests                                   |
-| `.github/workflows/`   | Badge URLs in `README.md`, Codecov flags                                              |
-| `README.md`            | Title, badges, clone URL, description                                                   |
-| `.env.example`         | Adjust defaults if your server uses a different port or protocol                        |
+| File / Directory          | What to Change                                                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `template_mcp_server/`  | Rename the package directory (e.g.,`my_mcp_server/`)                                                                        |
+| `pyproject.toml`        | `name`, `project.scripts` entry, `[project.urls]`, `[tool.coverage.run] source`                                       |
+| `Makefile`              | References in `lint`, `local`, and deployment targets                                                                     |
+| `Containerfile`         | `COPY` source path and `CMD` module path                                                                                  |
+| `compose.yaml`          | `container_name`, service name, healthcheck URL                                                                             |
+| `deployment/openshift/` | App labels, image names, route hostnames in all manifests (`deployment.yaml`, `route.yaml`, `kustomization.yaml`, etc.) |
+| `.github/workflows/`    | Workflow names and paths                                                                                                      |
+| `README.md`             | Title, description, clone URL, and all badge URLs (tests, coverage, Codespaces)                                               |
+| `.env.example`          | Adjust defaults if your server uses a different port or protocol                                                              |
 
 ### Verify Rename
 
@@ -101,33 +101,33 @@ The output should be empty (or only match this README section itself).
 
 ## Configuration
 
-| Variable                   | Default       | Description                                                 |
-| -------------------------- | ------------- | ----------------------------------------------------------- |
-| `MCP_HOST`               | `localhost` | Server bind address                                         |
-| `MCP_PORT`               | `5001`      | Server port (1024-65535)                                    |
-| `MCP_TRANSPORT_PROTOCOL` | `http`      | Transport protocol (`http`, `sse`, `streamable-http`) |
-| `MCP_SSL_KEYFILE`        | `None`      | SSL private key file path                                   |
-| `MCP_SSL_CERTFILE`       | `None`      | SSL certificate file path                                   |
-| `ENABLE_AUTH`            | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
-| `USE_EXTERNAL_BROWSER_AUTH` | `False`  | Browser-based OAuth for local dev                           |
-| `PYTHON_LOG_LEVEL`       | `INFO`      | Logging level                                               |
+| Variable                      | Default       | Description                                                          |
+| ----------------------------- | ------------- | -------------------------------------------------------------------- |
+| `MCP_HOST`                  | `localhost` | Server bind address                                                  |
+| `MCP_PORT`                  | `5001`      | Server port (1024-65535)                                             |
+| `MCP_TRANSPORT_PROTOCOL`    | `http`      | Transport protocol (`http`, `sse`, `streamable-http`)          |
+| `MCP_SSL_KEYFILE`           | `None`      | SSL private key file path                                            |
+| `MCP_SSL_CERTFILE`          | `None`      | SSL certificate file path                                            |
+| `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
+| `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
 
 ## Documentation
 
-| Guide                             | Description                                                |
-| --------------------------------- | ---------------------------------------------------------- |
-| [Architecture](docs/architecture.md) | System diagrams, code structure, key components, MCP tools |
-| [Development](docs/development.md)   | Setup, running locally, testing, code quality              |
-| [Deployment](docs/deployment.md)     | Podman, OpenShift, container configuration                 |
-| [CI/CD](docs/ci-cd.md)               | Workflows, pipeline features, running CI locally           |
-| [Contributing](CONTRIBUTING.md)      | Development workflow, commit conventions, PR process       |
-| [Security](SECURITY.md)              | Vulnerability reporting policy                             |
-| [Changelog](CHANGELOG.md)            | Release history                                            |
-| [Authentication](docs/authentication.md)   | OAuth setup, auth modes, troubleshooting                   |
-| [Tutorial](docs/tutorial.md)            | Your First Tool in 5 Minutes                               |
-| [Examples](examples/)                | FastMCP and LangGraph client examples                      |
+| Guide                                 | Description                                                |
+| ------------------------------------- | ---------------------------------------------------------- |
+| [Architecture](docs/architecture.md)     | System diagrams, code structure, key components, MCP tools |
+| [Development](docs/development.md)       | Setup, running locally, testing, code quality              |
+| [Deployment](docs/deployment.md)         | Podman, OpenShift, container configuration                 |
+| [CI/CD](docs/ci-cd.md)                   | Workflows, pipeline features, running CI locally           |
+| [Contributing](CONTRIBUTING.md)          | Development workflow, commit conventions, PR process       |
+| [Security](SECURITY.md)                  | Vulnerability reporting policy                             |
+| [Changelog](CHANGELOG.md)                | Release history                                            |
+| [Authentication](docs/authentication.md) | OAuth setup, auth modes, troubleshooting                   |
+| [Tutorial](docs/tutorial.md)             | Your First Tool in 5 Minutes                               |
+| [Examples](examples/)                    | FastMCP and LangGraph client examples                      |
 
 ## Contributing
 

@@ -256,3 +256,43 @@ template-mcp-server/
 1. **`multiply_numbers`**: Demonstrates basic arithmetic operations with error handling
 2. **`get_redhat_logo`**: Shows resource access patterns with base64 encoding
 3. **`generate_code_review_prompt`**: Illustrates prompt generation for code analysis
+
+## HTTP Endpoints
+
+The FastAPI application (`api.py`) exposes the following HTTP routes. OAuth routes are registered conditionally when `ENABLE_AUTH=True`.
+
+### Core Routes
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check — returns `{"status": "healthy"}` |
+| `POST` | `/mcp` | MCP JSON-RPC endpoint (tools/list, tools/call, etc.) |
+| `GET` | `/.well-known/oauth-protected-resource` | RFC 8414 resource server metadata (auth only) |
+| `GET` | `/.well-known/oauth-authorization-server` | RFC 8414 authorization server metadata (auth only) |
+
+### OAuth Routes (prefix: `/auth`)
+
+Registered when `ENABLE_AUTH=True` via `register_oauth_routes()`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/auth/authorize` | Start the authorization code flow |
+| `GET` | `/auth/callback/oidc` | OAuth callback — exchanges code for token |
+| `POST` | `/auth/token` | Token endpoint (issue / refresh tokens) |
+| `POST` | `/auth/register` | Dynamic client registration |
+| `POST` | `/auth/introspect` | Token introspection |
+
+> **Note:** The MCP endpoint accepts JSON-RPC requests. `tools/list` is exempt from auth so that agents can discover tools without a token; `tools/call` requires a valid bearer token.
+
+## Error Handling
+
+The server uses a layered error handling strategy:
+
+| Layer | Mechanism | Example |
+|-------|-----------|---------|
+| **Startup** | `main.py` validates settings and catches `SystemExit`, `KeyboardInterrupt`, and unexpected exceptions before the event loop starts | Missing required env var → logged + exit(1) |
+| **Middleware** | `AuthorizationMiddleware` / `LocalDevelopmentAuthorizationMiddleware` intercept requests and return `401` or `403` JSON responses for invalid or missing tokens | Expired bearer token → `{"detail": "Unauthorized"}` |
+| **Health** | `/health` returns `200` with `{"status": "healthy"}` — no auth required | Used by container probes and load balancers |
+| **Tool-level** | Each MCP tool validates its own inputs (type checks, value ranges) and raises descriptive errors that the MCP protocol returns to the client | `multiply_numbers` with non-numeric input → error message in MCP response |
+| **OAuth** | OAuth controller methods catch provider errors and return appropriate OAuth error responses (`invalid_grant`, `invalid_client`, etc.) | Bad authorization code → `{"error": "invalid_grant"}` |
+| **Logging** | All layers log via structlog with JSON output, including request IDs and error context | Structured `error` level entries with stack traces |

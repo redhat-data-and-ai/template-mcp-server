@@ -17,7 +17,7 @@ This project uses GitHub Actions for automated CI/CD workflows to ensure code qu
 
 ### Code Quality Assurance
 - Multi-Python version testing (3.12, 3.13)
-- Comprehensive test suite execution (279 tests)
+- Comprehensive test suite execution
 - Code coverage reporting (80%+ requirement)
 - Ruff linting and formatting validation
 - MyPy type checking

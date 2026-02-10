@@ -10,6 +10,7 @@
 ## Setup
 
 1. **Install uv (if not already installed):**
+
    ```bash
    # On macOS/Linux:
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -23,14 +24,14 @@
    # Or with pip:
    pip install uv
    ```
-
 2. **Clone the repository:**
+
    ```bash
    git clone https://github.com/redhat-data-and-ai/template-mcp-server
    cd template-mcp-server
    ```
-
 3. **Create and activate a virtual environment with uv:**
+
    ```bash
    uv venv
 
@@ -41,20 +42,20 @@
    # On Windows:
    .venv\Scripts\activate
    ```
-
 4. **Install the package and development dependencies:**
+
    ```bash
    # Install in editable mode with dev dependencies (pytest, ruff, mypy, pre-commit, etc.)
    uv pip install -e ".[dev]"
    ```
-
 5. **Configure environment variables:**
+
    ```bash
    cp .env.example .env
    # Edit .env file with your configuration
    ```
-
 6. **Run the server:**
+
    ```bash
    # Using the installed console script
    template-mcp-server
@@ -70,21 +71,21 @@
 
 The server configuration is managed through environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_HOST` | `localhost` | Server bind address |
-| `MCP_PORT` | `5001` | Server port (1024-65535) |
-| `MCP_TRANSPORT_PROTOCOL` | `http` | Transport protocol (`http`, `sse`, `streamable-http`) |
-| `MCP_HOST_ENDPOINT` | `http://localhost:5001` | Public-facing host URL (used in OAuth discovery responses) |
-| `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
-| `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
-| `PYTHON_LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
-| `ENVIRONMENT` | `development` | Deployment environment identifier |
-| `ENABLE_AUTH` | `True`* | Enable OAuth authentication (see [Auth Guide](authentication.md)) |
-| `USE_EXTERNAL_BROWSER_AUTH` | `False` | Browser-based OAuth for local dev |
-| `COMPATIBLE_WITH_CURSOR` | `False` | Cursor IDE OAuth2 compatibility mode |
-| `CORS_ENABLED` | `False` | Enable CORS middleware |
-| `CORS_ORIGINS` | `["*"]` | Allowed CORS origins |
+| Variable                      | Default                   | Description                                                               |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `MCP_HOST`                  | `localhost`             | Server bind address                                                       |
+| `MCP_PORT`                  | `5001`                  | Server port (1024-65535)                                                  |
+| `MCP_TRANSPORT_PROTOCOL`    | `http`                  | Transport protocol (`http`, `sse`, `streamable-http`)               |
+| `MCP_HOST_ENDPOINT`         | `http://localhost:5001` | Public-facing host URL (used in OAuth discovery responses)                |
+| `MCP_SSL_KEYFILE`           | `None`                  | SSL private key file path                                                 |
+| `MCP_SSL_CERTFILE`          | `None`                  | SSL certificate file path                                                 |
+| `PYTHON_LOG_LEVEL`          | `INFO`                  | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
+| `ENVIRONMENT`               | `development`           | Deployment environment identifier                                         |
+| `ENABLE_AUTH`               | `True`*                 | Enable OAuth authentication (see[Auth Guide](authentication.md))             |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False`                 | Browser-based OAuth for local dev                                         |
+| `COMPATIBLE_WITH_CURSOR`    | `False`                 | Cursor IDE OAuth2 compatibility mode                                      |
+| `CORS_ENABLED`              | `False`                 | Enable CORS middleware                                                    |
+| `CORS_ORIGINS`              | `["*"]`                 | Allowed CORS origins                                                      |
 
 *\* `ENABLE_AUTH` defaults to `True` in code but `False` in `.env.example`. Always copy `.env.example` to `.env`.*
 
@@ -102,11 +103,12 @@ By default, `.env.example` ships with `ENABLE_AUTH=False` so you can start devel
 ## Verify Installation
 
 1. **Health check:**
+
    ```bash
    curl http://localhost:5001/health
    ```
-
 2. **Test MCP tools:**
+
    ```bash
    # Test multiply tool via MCP endpoint
    curl -X POST "http://localhost:5001/mcp" \
@@ -127,19 +129,20 @@ pre-commit install
 
 ### Test Commands
 
-The project includes a comprehensive test suite with 279 tests covering unit tests, integration tests, and various edge cases.
+The project includes a comprehensive test suite covering unit tests, integration tests, and various edge cases. To see the current count, run `pytest --collect-only -q`.
 
 1. **Run all tests:**
+
    ```bash
    pytest
    ```
-
 2. **Run tests with coverage reporting:**
+
    ```bash
    pytest --cov=template_mcp_server --cov-report=html --cov-report=term
    ```
-
 3. **Run tests by category:**
+
    ```bash
    # Unit tests only
    pytest -m unit
@@ -153,8 +156,8 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
    # Tests requiring network access
    pytest -m network
    ```
-
 4. **Run specific test modules:**
+
    ```bash
    # Test individual components
    pytest tests/test_tools.py -v
@@ -166,8 +169,8 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
    # Run basic integration tests
    pytest tests/test_basic.py -v
    ```
-
 5. **Run tests with different output formats:**
+
    ```bash
    # Verbose output with detailed test names
    pytest -v
@@ -181,13 +184,13 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
 
 ### Test Suite Overview
 
-| Test Category | Count | Description |
-|---------------|-------|-------------|
-| **Unit Tests** | ~250 | Individual component testing with mocking |
-| **Integration Tests** | ~29 | End-to-end workflow testing |
-| **Total Tests** | 279 | Complete test coverage |
+| Test Category               | Count    | Description                               |
+| --------------------------- | -------- | ----------------------------------------- |
+| **Unit Tests**        | Majority | Individual component testing with mocking |
+| **Integration Tests** | ~10%     | End-to-end workflow testing               |
 
 **Test Files:**
+
 - `test_tools.py` - Tool unit tests (multiply, code review, logo)
 - `test_settings.py` - Configuration and environment variable tests
 - `test_mcp.py` - MCP server initialization and tool registration tests
@@ -199,6 +202,7 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
 - `test_utils.py` - Utility and logging tests
 
 **Test Features:**
+
 - Comprehensive error handling validation
 - Async function testing support
 - Mock external dependencies
@@ -210,6 +214,7 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
 ## Code Quality Checks
 
 1. **Linting and formatting with Ruff:**
+
    ```bash
    # Check for issues
    ruff check .
@@ -220,18 +225,18 @@ The project includes a comprehensive test suite with 279 tests covering unit tes
    # Format code
    ruff format .
    ```
-
 2. **Type checking with MyPy:**
+
    ```bash
    mypy template_mcp_server/
    ```
-
 3. **Docstring validation:**
+
    ```bash
    pydocstyle template_mcp_server/ --convention=google
    ```
-
 4. **Run all pre-commit checks:**
+
    ```bash
    pre-commit run --all-files
    ```

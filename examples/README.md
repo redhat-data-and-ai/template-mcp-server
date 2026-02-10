@@ -12,7 +12,7 @@ Ready-to-use client examples for connecting to your MCP server with different fr
 ### **1. FastMCP Client (Simple)**
 ```bash
 # Install dependencies
-pip install fastmcp httpx
+uv pip install fastmcp httpx
 
 # Run the example
 python examples/fastmcp_client.py
@@ -23,7 +23,7 @@ python examples/fastmcp_client.py
 ### **2. LangGraph Client (Advanced)**
 ```bash
 # Install dependencies
-pip install langgraph httpx
+uv pip install langgraph httpx
 
 # Run the example
 python examples/langgraph_client.py

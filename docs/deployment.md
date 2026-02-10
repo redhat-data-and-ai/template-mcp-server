@@ -27,15 +27,28 @@ make deploy openshift NAMESPACE=your-project-name
 make undeploy openshift
 ```
 
+## Container Build (`Containerfile`)
+
+The `Containerfile` uses a multi-stage approach on a Red Hat UBI base:
+
+| Stage | What Happens |
+|-------|-------------|
+| **Base image** | `registry.access.redhat.com/ubi9/python-312:latest` — Red Hat UBI 9 with Python 3.12 |
+| **Dependency install** | Switches to `root`, copies `pyproject.toml`, installs `uv`, creates a venv, and installs runtime deps via `uv pip install -r pyproject.toml` |
+| **Source copy** | Copies `template_mcp_server/` into `/app` (dev deps and tests are excluded) |
+| **Environment** | Sets `VIRTUAL_ENV`, prepends venv to `PATH`, sets `PYTHONPATH=/app` |
+| **User** | Drops back to `default` (non-root) for runtime security |
+| **Entrypoint** | `CMD ["/app/.venv/bin/python", "-m", "template_mcp_server.src.main"]` |
+
+Port **5001** is exposed via `EXPOSE 5001`.
+
+> **Rename note:** When forking the template, update the `COPY` source path and the `CMD` module path in `Containerfile` to match your package name.
+
 ## Container Configuration
 
-The container is built using a Red Hat UBI (Universal Base Image) base. Key details:
+The `compose.yaml` maps container port 5001 to host port 5001 and overrides `MCP_HOST=0.0.0.0` so the server binds to all interfaces inside the container (required for port forwarding to work).
 
-- **Base Image**: Red Hat UBI 9 / Python 3.12
-- **Exposed Port**: 5001 (matching `.env.example`, mapped via `compose.yaml`)
 - **Health Check**: `curl -f http://localhost:5001/health`
-
-The `compose.yaml` maps container port 5001 to host port 5001. It also overrides `MCP_HOST=0.0.0.0` so the server binds to all interfaces inside the container (required for port forwarding to work).
 
 ## Manual Testing
 

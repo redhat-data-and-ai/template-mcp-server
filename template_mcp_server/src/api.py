@@ -164,7 +164,7 @@ class LocalDevelopmentAuthorizationMiddleware(BaseHTTPMiddleware):
                 import json
 
                 body = json.loads(body_bytes)
-                #! I think this is needed only for tool calls so goose or other agents can list tools with requiring auth.
+                # Only enforce auth on tools/call — allow tools/list so agents can discover tools without a token.
                 if body.get("method") == "tools/call":
 
                     async def receive():
