@@ -108,7 +108,11 @@ The output should be empty (or only match this README section itself).
 | `MCP_TRANSPORT_PROTOCOL` | `http`      | Transport protocol (`http`, `sse`, `streamable-http`) |
 | `MCP_SSL_KEYFILE`        | `None`      | SSL private key file path                                   |
 | `MCP_SSL_CERTFILE`       | `None`      | SSL certificate file path                                   |
+| `ENABLE_AUTH`            | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False`  | Browser-based OAuth for local dev                           |
 | `PYTHON_LOG_LEVEL`       | `INFO`      | Logging level                                               |
+
+*\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
 
 ## Documentation
 
@@ -121,6 +125,7 @@ The output should be empty (or only match this README section itself).
 | [Contributing](CONTRIBUTING.md)      | Development workflow, commit conventions, PR process       |
 | [Security](SECURITY.md)              | Vulnerability reporting policy                             |
 | [Changelog](CHANGELOG.md)            | Release history                                            |
+| [Authentication](docs/authentication.md)   | OAuth setup, auth modes, troubleshooting                   |
 | [Tutorial](docs/tutorial.md)            | Your First Tool in 5 Minutes                               |
 | [Examples](examples/)                | FastMCP and LangGraph client examples                      |
 

@@ -77,6 +77,15 @@ The server configuration is managed through environment variables:
 | `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
 | `PYTHON_LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
 
+## Authentication
+
+By default, `.env.example` ships with `ENABLE_AUTH=False` so you can start developing without an SSO provider. When you are ready to test the OAuth flow, see the [Authentication Guide](authentication.md) for:
+
+- How the three auth modes work
+- How to configure an OIDC provider (Keycloak, Auth0, Okta, etc.)
+- Environment variable reference
+- Troubleshooting 401 errors
+
 ## Verify Installation
 
 1. **Health check:**
