@@ -35,7 +35,7 @@ Common approaches:
 
 | Option | When to Use |
 |--------|------------|
-| [CrunchyData Postgres Operator](https://access.crunchydata.com/documentation/postgres-operator/latest/) | Recommended for OpenShift — operator-managed, HA-ready |
+| [CloudNativePG Operator](https://cloudnative-pg.io/) | Recommended for Kubernetes/OpenShift — operator-managed, HA-ready, Apache 2.0 licensed |
 | Managed cloud DB (RDS, Cloud SQL, Azure DB) | Hybrid deployments or when the cluster is not self-hosted |
 | Standalone PostgreSQL Pod | Quick testing only — not recommended for production |
 
