@@ -39,11 +39,20 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
     code = request.query_params.get("code")
     state = request.query_params.get("state")
 
+    if not code or not state:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_request",
+                "error_description": "Missing code or state parameter",
+            },
+        )
+
     token_set_from_code = OAuth2Handler.get_access_token_from_authorization_code_flow(
         code, state
     )
 
-    logger.info(f"\n\n\nAccess token: {token_set_from_code.get('access_token')}\n\n\n")
+    logger.debug("Access token obtained successfully")
 
     if settings.USE_EXTERNAL_BROWSER_AUTH:
         access_token = token_set_from_code.get("access_token")
@@ -60,9 +69,18 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
                 },
             )
 
-    code_from_session = request.session.get("user_details").get("auth_code")
-    state_from_session = request.session.get("user_details").get("state")
-    redirect_uri_from_session = request.session.get("user_details").get("redirect_uri")
+    user_details = request.session.get("user_details")
+    if not user_details:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_request",
+                "error_description": "Missing session data",
+            },
+        )
+    code_from_session = user_details.get("auth_code")
+    state_from_session = user_details.get("state")
+    redirect_uri_from_session = user_details.get("redirect_uri")
 
     await oauth_service.add_token_to_code(code_from_session, token_set_from_code)
 
@@ -211,10 +229,10 @@ async def handle_token(request: Request, oauth_service: OAuthService) -> Dict[st
         # Route to appropriate handler based on grant type
         if grant_type == "authorization_code":
             try:
-                token_request = AuthorizationCodeTokenRequest(**request_data)
-                logger.info(f"Token request: {token_request}")
+                auth_code_request = AuthorizationCodeTokenRequest(**request_data)
+                logger.info(f"Token request: {auth_code_request}")
                 return await handle_authorization_code_grant(
-                    token_request, oauth_service
+                    auth_code_request, oauth_service
                 )
             except ValidationError as e:
                 raise HTTPException(
@@ -226,9 +244,9 @@ async def handle_token(request: Request, oauth_service: OAuthService) -> Dict[st
                 )
         elif grant_type == "refresh_token":
             try:
-                token_request = RefreshTokenRequest(**request_data)
+                refresh_request = RefreshTokenRequest(**request_data)
                 return await handle_refresh_token_grant_pydantic(
-                    token_request, oauth_service
+                    refresh_request, oauth_service
                 )
             except ValidationError as e:
                 raise HTTPException(
@@ -240,9 +258,9 @@ async def handle_token(request: Request, oauth_service: OAuthService) -> Dict[st
                 )
         elif grant_type == "client_credentials":
             try:
-                token_request = ClientCredentialsTokenRequest(**request_data)
+                credentials_request = ClientCredentialsTokenRequest(**request_data)
                 return await handle_client_credentials_grant_pydantic(
-                    token_request, oauth_service
+                    credentials_request, oauth_service
                 )
             except ValidationError as e:
                 raise HTTPException(

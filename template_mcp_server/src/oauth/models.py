@@ -1,10 +1,16 @@
 """Pydantic models for OAuth request and response validation."""
 
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
 
 from template_mcp_server.src.settings import settings
+
+# Pydantic uses ... (Ellipsis) as a sentinel for "required field".
+# When COMPATIBLE_WITH_CURSOR is True, client_id becomes optional (default=None).
+_CLIENT_ID_DEFAULT: Any = (
+    None if getattr(settings, "COMPATIBLE_WITH_CURSOR", False) else ...
+)
 
 
 class TokenRequestBase(BaseModel):
@@ -13,7 +19,7 @@ class TokenRequestBase(BaseModel):
     grant_type: str = Field(..., description="OAuth 2.0 grant type")
 
     client_id: Optional[str] = Field(
-        None if getattr(settings, "COMPATIBLE_WITH_CURSOR", False) else ...,
+        _CLIENT_ID_DEFAULT,
         description="OAuth client identifier",
     )
     client_secret: Optional[str] = Field(None, description="OAuth client secret")

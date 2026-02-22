@@ -10,7 +10,7 @@ The example shows:
 - Handling tool calls and responses in a conversational context
 
 Prerequisites:
-- Template MCP server must be running on http://0.0.0.0:4000
+- Template MCP server must be running on http://localhost:5001
 - Google Generative AI credentials must be configured via
     GEMINI_API_KEY environment variable or
     GOOGLE_APPLICATION_CREDENTIALS environment variable
@@ -153,7 +153,7 @@ async def get_agent_redhat():
     client = MultiServerMCPClient(
         {
             "template_mcp_server": {
-                "url": "http://0.0.0.0:8080/mcp/",
+                "url": "http://localhost:5001/mcp/",
                 "transport": "streamable_http",
             },
         }
@@ -233,7 +233,7 @@ async def main():
 
     except Exception as e:
         print(f"\n❌ Error running examples: {e}")
-        print("Make sure the template MCP server is running on http://0.0.0.0:4000")
+        print("Make sure the template MCP server is running on http://localhost:5001")
 
 
 if __name__ == "__main__":
