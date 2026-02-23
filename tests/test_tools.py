@@ -5,9 +5,40 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
+from template_mcp_server.src.settings import settings
 from template_mcp_server.src.tools.code_review_tool import generate_code_review_prompt
 from template_mcp_server.src.tools.multiply_tool import multiply_numbers
 from template_mcp_server.src.tools.redhat_logo_tool import get_redhat_logo
+from template_mcp_server.utils.toon_utils import from_toon
+
+
+def normalize_result(result):
+    """Convert TOON format string to dict if needed for testing.
+
+    This helper first verifies that the result type matches the ENABLE_TOON_FORMAT setting,
+    then normalizes it to a dict for content assertions.
+
+    Args:
+        result: Either a TOON-formatted string or a dict
+
+    Returns:
+        dict: The normalized result as a dictionary
+
+    Raises:
+        AssertionError: If result type doesn't match ENABLE_TOON_FORMAT setting
+    """
+    if settings.ENABLE_TOON_FORMAT:
+        # When flag is True, result should be a TOON string
+        assert isinstance(result, str), (
+            f"Expected TOON string when ENABLE_TOON_FORMAT=True, got {type(result).__name__}"
+        )
+        return from_toon(result)
+    else:
+        # When flag is False, result should be a dict
+        assert isinstance(result, dict), (
+            f"Expected dict when ENABLE_TOON_FORMAT=False, got {type(result).__name__}"
+        )
+        return result
 
 
 class TestMultiplyTool:
@@ -19,7 +50,7 @@ class TestMultiplyTool:
         a, b = 5.0, 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "success"
@@ -35,7 +66,7 @@ class TestMultiplyTool:
         a, b = 10, 7
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "success"
@@ -49,7 +80,7 @@ class TestMultiplyTool:
         a, b = -5.0, 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "success"
@@ -61,7 +92,7 @@ class TestMultiplyTool:
         a, b = 10.0, 0.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "success"
@@ -73,7 +104,7 @@ class TestMultiplyTool:
         a, b = 0.1, 0.2
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "success"
@@ -85,7 +116,7 @@ class TestMultiplyTool:
         a, b = "5", 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "error"
@@ -98,7 +129,7 @@ class TestMultiplyTool:
         a, b = None, 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "error"
@@ -111,7 +142,7 @@ class TestMultiplyTool:
         a, b = [1, 2], 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "error"
@@ -124,7 +155,7 @@ class TestMultiplyTool:
         a, b = "invalid", "also_invalid"
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert result["status"] == "error"
@@ -156,12 +187,12 @@ class TestMultiplyTool:
         mock_logger.error.assert_called()
 
     def test_multiply_numbers_return_type(self):
-        """Test that the function returns a dictionary."""
+        """Test that the function returns a dictionary (or TOON string that converts to dict)."""
         # Arrange
         a, b = 5.0, 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert isinstance(result, dict)
@@ -178,7 +209,7 @@ class TestMultiplyTool:
         a, b = "invalid", 3.0
 
         # Act
-        result = multiply_numbers(a, b)
+        result = normalize_result(multiply_numbers(a, b))
 
         # Assert
         assert isinstance(result, dict)
@@ -193,8 +224,8 @@ class TestMultiplyTool:
         a, b = 5.0, 3.0
 
         # Act
-        result1 = multiply_numbers(a, b)
-        result2 = multiply_numbers(b, a)
+        result1 = normalize_result(multiply_numbers(a, b))
+        result2 = normalize_result(multiply_numbers(b, a))
 
         # Assert
         assert result1["result"] == result2["result"]
@@ -212,7 +243,9 @@ class TestCodeReviewTool:
         language = "python"
 
         # Act
-        result = asyncio.run(generate_code_review_prompt(code, language))
+        result = normalize_result(
+            asyncio.run(generate_code_review_prompt(code, language))
+        )
 
         # Assert
         assert isinstance(result, dict)
@@ -228,7 +261,7 @@ class TestCodeReviewTool:
         code = "function add(a, b) { return a + b; }"
 
         # Act
-        result = asyncio.run(generate_code_review_prompt(code))
+        result = normalize_result(asyncio.run(generate_code_review_prompt(code)))
 
         # Assert
         assert isinstance(result, dict)
@@ -243,7 +276,9 @@ class TestCodeReviewTool:
         language = "python"
 
         # Act
-        result = asyncio.run(generate_code_review_prompt(code, language))
+        result = normalize_result(
+            asyncio.run(generate_code_review_prompt(code, language))
+        )
 
         # Assert
         assert isinstance(result, dict)
@@ -257,7 +292,9 @@ class TestCodeReviewTool:
         language = ""
 
         # Act
-        result = asyncio.run(generate_code_review_prompt(code, language))
+        result = normalize_result(
+            asyncio.run(generate_code_review_prompt(code, language))
+        )
 
         # Assert
         assert isinstance(result, dict)
@@ -271,7 +308,9 @@ class TestCodeReviewTool:
         language = "python"
 
         # Act
-        result = asyncio.run(generate_code_review_prompt(code, language))
+        result = normalize_result(
+            asyncio.run(generate_code_review_prompt(code, language))
+        )
         content = result["prompt"]
 
         # Assert
@@ -303,7 +342,7 @@ class TestRedHatLogoTool:
         mock_path.return_value = mock_path_instance
 
         # Act
-        result = asyncio.run(get_redhat_logo())
+        result = normalize_result(asyncio.run(get_redhat_logo()))
 
         # Assert
         assert result["status"] == "success"
@@ -332,7 +371,7 @@ class TestRedHatLogoTool:
         # Configure open to raise FileNotFoundError
         with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
             # Act
-            result = asyncio.run(get_redhat_logo())
+            result = normalize_result(asyncio.run(get_redhat_logo()))
 
         # Assert
         assert result["status"] == "error"
@@ -357,7 +396,7 @@ class TestRedHatLogoTool:
         # Configure open to raise PermissionError
         with patch("builtins.open", side_effect=PermissionError("Permission denied")):
             # Act
-            result = asyncio.run(get_redhat_logo())
+            result = normalize_result(asyncio.run(get_redhat_logo()))
 
         # Assert
         assert result["status"] == "error"

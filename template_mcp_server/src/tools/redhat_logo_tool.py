@@ -6,14 +6,14 @@ as a base64 encoded resource for MCP clients as a tool.
 
 import base64
 from pathlib import Path
-from typing import Any, Dict
 
 from template_mcp_server.utils.pylogger import get_python_logger
+from template_mcp_server.utils.toon_utils import format_response
 
 logger = get_python_logger()
 
 
-async def get_redhat_logo() -> Dict[str, Any]:
+async def get_redhat_logo():
     """Return the Red Hat logo as a base64 encoded string.
 
     TOOL_NAME=get_redhat_logo
@@ -21,7 +21,7 @@ async def get_redhat_logo() -> Dict[str, Any]:
     USECASE=Retrieve Red Hat logo for presentations, documentation, or branding
     INSTRUCTIONS=1. Call function (no parameters needed), 2. Receive base64-encoded logo data
     INPUT_DESCRIPTION=No input parameters required
-    OUTPUT_DESCRIPTION=Dictionary with status, operation, logo metadata (name, description, mimeType), base64 data, size info, and message
+    OUTPUT_DESCRIPTION=TOON-formatted string with status, operation, logo metadata (name, description, mimeType), base64 data, size info, and message
     EXAMPLES=get_redhat_logo()
     PREREQUISITES=None - logo file must exist in assets directory
     RELATED_TOOLS=None - standalone asset retrieval
@@ -30,19 +30,21 @@ async def get_redhat_logo() -> Dict[str, Any]:
 
     Reads the Red Hat logo PNG file from the assets directory and returns
     it as a base64 encoded string for MCP clients to use.
+    Returns data in TOON format for 30-60% token reduction.
 
     Returns:
-        Dict[str, Any]: A dictionary containing the logo information with keys:
+        str: TOON-formatted string containing the logo information with:
             - status: Operation status (success/error)
             - name: Display name for the logo
             - description: Description of the logo
             - mimeType: MIME type of the image (image/png)
             - data: Base64 encoded PNG data
+            - size_bytes: Size in bytes
             - message: Status message
 
     Note:
         If the logo file is not found or cannot be read, returns an error
-        response with appropriate error information.
+        response with appropriate error information in TOON format.
     """
     try:
         # Get the path to the assets directory relative to this file
@@ -58,41 +60,49 @@ async def get_redhat_logo() -> Dict[str, Any]:
 
         logger.info("Successfully read and encoded Red Hat logo")
 
-        return {
-            "status": "success",
-            "operation": "get_redhat_logo",
-            "name": "Red Hat Logo",
-            "description": "Red Hat logo as base64 encoded PNG",
-            "mimeType": "image/png",
-            "data": logo_base64,
-            "size_bytes": len(logo_data),
-            "message": "Successfully retrieved Red Hat logo",
-        }
+        return format_response(
+            {
+                "status": "success",
+                "operation": "get_redhat_logo",
+                "name": "Red Hat Logo",
+                "description": "Red Hat logo as base64 encoded PNG",
+                "mimeType": "image/png",
+                "data": logo_base64,
+                "size_bytes": len(logo_data),
+                "message": "Successfully retrieved Red Hat logo",
+            }
+        )
 
     except FileNotFoundError:
         error_msg = f"Could not find logo file at {logo_path}"
         logger.error(error_msg)
-        return {
-            "status": "error",
-            "operation": "get_redhat_logo",
-            "error": "file_not_found",
-            "message": error_msg,
-        }
+        return format_response(
+            {
+                "status": "error",
+                "operation": "get_redhat_logo",
+                "error": "file_not_found",
+                "message": error_msg,
+            }
+        )
     except PermissionError:
         error_msg = f"Permission denied reading logo file at {logo_path}"
         logger.error(error_msg)
-        return {
-            "status": "error",
-            "operation": "get_redhat_logo",
-            "error": "permission_denied",
-            "message": error_msg,
-        }
+        return format_response(
+            {
+                "status": "error",
+                "operation": "get_redhat_logo",
+                "error": "permission_denied",
+                "message": error_msg,
+            }
+        )
     except Exception as e:
         error_msg = f"Error reading logo file: {str(e)}"
         logger.error(error_msg)
-        return {
-            "status": "error",
-            "operation": "get_redhat_logo",
-            "error": "generic_error",
-            "message": error_msg,
-        }
+        return format_response(
+            {
+                "status": "error",
+                "operation": "get_redhat_logo",
+                "error": "generic_error",
+                "message": error_msg,
+            }
+        )

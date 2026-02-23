@@ -277,6 +277,14 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+    ENABLE_TOON_FORMAT: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_TOON_FORMAT",
+            "description": "Enable TOON format for MCP tool responses (30-60% token reduction)",
+            "example": "true",
+        },
+    )
 
 
 def validate_config(settings: Settings) -> None:
