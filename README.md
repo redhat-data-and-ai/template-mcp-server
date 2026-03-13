@@ -8,12 +8,14 @@
 
 A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
 
-The template includes three example MCP tools: a multiply calculator, a code review prompt generator, and a Red Hat logo tool. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
+The template includes five MCP tools: a multiply calculator, a code review prompt generator, a Red Hat logo tool, a knowledge search engine, and a web search tool powered by the Tavily API. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
 
 ## Features
 
 - **FastMCP + FastAPI** with multiple transport protocols (HTTP, SSE, streamable-HTTP)
-- **Three example tools**: multiply calculator, code review prompt, Red Hat logo
+- **Five MCP tools**: multiply calculator, code review prompt, Red Hat logo, knowledge search, web search (Tavily)
+- **Web search via Tavily API**: Parallel query execution, deduplication, retry with backoff
+- **Knowledge search**: In-memory knowledge base with category filtering and relevance scoring
 - **Pydantic configuration** via environment variables
 - **Structured JSON logging** with structlog
 - **SSL/TLS support** for secure deployments
@@ -110,6 +112,9 @@ The output should be empty (or only match this README section itself).
 | `MCP_SSL_CERTFILE`          | `None`      | SSL certificate file path                                            |
 | `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
 | `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
+| `TAVILY_API_KEY`            | `None`      | Tavily API key (required for `web_search` tool)                      |
+| `WEB_SEARCH_TIMEOUT`        | `30`        | Timeout in seconds for web search requests                           |
+| `WEB_SEARCH_MAX_SNIPPET_LENGTH` | `500`  | Maximum length of search result snippets                             |
 | `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
