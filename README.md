@@ -79,17 +79,17 @@ git init
 
 After creating your project, replace all references to `template-mcp-server` and `template_mcp_server` with your project name. The following files require updates:
 
-| File / Directory          | What to Change                                                                                                                |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `template_mcp_server/`  | Rename the package directory (e.g.,`my_mcp_server/`)                                                                        |
-| `pyproject.toml`        | `name`, `project.scripts` entry, `[project.urls]`, `[tool.coverage.run] source`                                       |
-| `Makefile`              | References in `lint`, `local`, and deployment targets                                                                     |
-| `Containerfile`         | `COPY` source path and `CMD` module path                                                                                  |
-| `compose.yaml`          | `container_name`, service name, healthcheck URL                                                                             |
+| File / Directory | What to Change |
+|------------------|----------------|
+| `template_mcp_server/` | Rename the package directory (e.g., `my_mcp_server/`) |
+| `pyproject.toml` | `name`, `project.scripts` entry, `[project.urls]`, `[tool.coverage.run] source` |
+| `Makefile` | References in `lint`, `local`, and deployment targets |
+| `Containerfile` | `COPY` source path and `CMD` module path |
+| `compose.yaml` | `container_name`, service name, healthcheck URL |
 | `deployment/openshift/` | App labels, image names, route hostnames in all manifests (`deployment.yaml`, `route.yaml`, `kustomization.yaml`, etc.) |
-| `.github/workflows/`    | Workflow names and paths                                                                                                      |
-| `README.md`             | Title, description, clone URL, and all badge URLs (tests, coverage, Codespaces)                                               |
-| `.env.example`          | Adjust defaults if your server uses a different port or protocol                                                              |
+| `.github/workflows/` | Workflow names and paths |
+| `README.md` | Title, description, clone URL, and all badge URLs (tests, coverage, Codespaces) |
+| `.env.example` | Adjust defaults if your server uses a different port or protocol |
 
 ### Verify Rename
 
@@ -103,36 +103,69 @@ The output should be empty (or only match this README section itself).
 
 ## Configuration
 
-| Variable                      | Default       | Description                                                          |
-| ----------------------------- | ------------- | -------------------------------------------------------------------- |
-| `MCP_HOST`                  | `localhost` | Server bind address                                                  |
-| `MCP_PORT`                  | `5001`      | Server port (1024-65535)                                             |
-| `MCP_TRANSPORT_PROTOCOL`    | `http`      | Transport protocol (`http`, `sse`, `streamable-http`)          |
-| `MCP_SSL_KEYFILE`           | `None`      | SSL private key file path                                            |
-| `MCP_SSL_CERTFILE`          | `None`      | SSL certificate file path                                            |
-| `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
-| `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
-| `TAVILY_API_KEY`            | `None`      | Tavily API key (required for `web_search` tool)                      |
-| `WEB_SEARCH_TIMEOUT`        | `30`        | Timeout in seconds for web search requests                           |
-| `WEB_SEARCH_MAX_SNIPPET_LENGTH` | `500`  | Maximum length of search result snippets                             |
-| `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
+### Server
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_HOST` | `localhost` | Server bind address |
+| `MCP_PORT` | `5001` | Server port (1024-65535) |
+| `MCP_TRANSPORT_PROTOCOL` | `http` | Transport protocol (`http`, `sse`, `streamable-http`) |
+| `MCP_HOST_ENDPOINT` | `http://localhost:5001` | Public base URL (used for OAuth callbacks) |
+| `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
+| `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
+| `ENVIRONMENT` | `development` | Environment label (`development`, `production`, `test`) |
+| `PYTHON_LOG_LEVEL` | `INFO` | Logging level |
+
+### Authentication
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_AUTH` | `False`* | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False` | Browser-based OAuth for local dev |
+| `COMPATIBLE_WITH_CURSOR` | `False` | Enable Cursor IDE OAuth compatibility flow |
+| `SESSION_SECRET` | `None` | Session signing secret (required in production) |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
 
+### Web Search
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TAVILY_API_KEY` | `None` | Tavily API key (required for `web_search` tool) |
+| `WEB_SEARCH_TIMEOUT` | `15` | Timeout in seconds for web search requests |
+| `WEB_SEARCH_MAX_SNIPPET_LENGTH` | `4000` | Maximum length of search result snippets |
+
+### CORS
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CORS_ENABLED` | `False` | Enable CORS middleware |
+| `CORS_ORIGINS` | `["*"]` | Allowed origins |
+| `CORS_CREDENTIALS` | `True` | Allow credentials in CORS requests |
+| `CORS_METHODS` | `["*"]` | Allowed HTTP methods |
+| `CORS_HEADERS` | `["*"]` | Allowed request headers |
+
+### Database (required when `ENABLE_AUTH=True`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_POOL_SIZE` | `10` | Connection pool size |
+| `POSTGRES_MAX_CONNECTIONS` | `20` | Maximum pool connections |
+
 ## Documentation
 
-| Guide                                 | Description                                                |
-| ------------------------------------- | ---------------------------------------------------------- |
-| [Architecture](docs/architecture.md)     | System diagrams, code structure, key components, MCP tools |
-| [Development](docs/development.md)       | Setup, running locally, testing, code quality              |
-| [Deployment](docs/deployment.md)         | Podman, OpenShift, container configuration                 |
-| [CI/CD](docs/ci-cd.md)                   | Workflows, pipeline features, running CI locally           |
-| [Contributing](CONTRIBUTING.md)          | Development workflow, commit conventions, PR process       |
-| [Security](SECURITY.md)                  | Vulnerability reporting policy                             |
-| [Changelog](CHANGELOG.md)                | Release history                                            |
-| [Authentication](docs/authentication.md) | OAuth setup, auth modes, troubleshooting                   |
-| [Tutorial](docs/tutorial.md)             | Your First Tool in 5 Minutes                               |
-| [Examples](examples/)                    | FastMCP and LangGraph client examples                      |
+| Guide | Description |
+|-------|-------------|
+| [Architecture](docs/architecture.md) | System diagrams, code structure, key components, MCP tools |
+| [Development](docs/development.md) | Setup, running locally, testing, code quality |
+| [Deployment](docs/deployment.md) | Podman, OpenShift, container configuration |
+| [CI/CD](docs/ci-cd.md) | Workflows, pipeline features, running CI locally |
+| [Contributing](CONTRIBUTING.md) | Development workflow, commit conventions, PR process |
+| [Security](SECURITY.md) | Vulnerability reporting policy |
+| [Changelog](CHANGELOG.md) | Release history |
+| [Authentication](docs/authentication.md) | OAuth setup, auth modes, troubleshooting |
+| [Tutorial](docs/tutorial.md) | Your First Tool in 5 Minutes |
+| [Examples](examples/) | FastMCP and LangGraph client examples |
 
 ## Contributing
 

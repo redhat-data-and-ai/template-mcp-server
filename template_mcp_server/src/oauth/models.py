@@ -1,6 +1,6 @@
 """Pydantic models for OAuth request and response validation."""
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -76,17 +76,6 @@ class ClientRegistrationRequest(BaseModel):
     )
 
 
-class TokenIntrospectionRequest(BaseModel):
-    """Request model for token introspection."""
-
-    token: str = Field(..., description="The token to introspect")
-    token_type_hint: Optional[str] = Field(
-        None, description="Hint about the type of token"
-    )
-    client_id: str = Field(..., description="OAuth client identifier")
-    client_secret: str = Field(..., description="OAuth client secret")
-
-
 class TokenResponse(BaseModel):
     """Response model for successful token requests."""
 
@@ -97,25 +86,6 @@ class TokenResponse(BaseModel):
     )
     refresh_token: Optional[str] = Field(None, description="The refresh token")
     scope: Optional[str] = Field(None, description="Scope of the access token")
-
-
-class TokenIntrospectionResponse(BaseModel):
-    """Response model for token introspection."""
-
-    active: bool = Field(..., description="Whether the token is active")
-    scope: Optional[str] = Field(None, description="Scope of the token")
-    client_id: Optional[str] = Field(None, description="Client identifier")
-    username: Optional[str] = Field(None, description="Username associated with token")
-    token_type: Optional[str] = Field(None, description="Type of token")
-    exp: Optional[int] = Field(None, description="Expiration timestamp")
-    iat: Optional[int] = Field(None, description="Issued at timestamp")
-    nbf: Optional[int] = Field(None, description="Not valid before timestamp")
-    sub: Optional[str] = Field(None, description="Subject of the token")
-    aud: Optional[Union[str, list[str]]] = Field(
-        None, description="Audience of the token"
-    )
-    iss: Optional[str] = Field(None, description="Issuer of the token")
-    jti: Optional[str] = Field(None, description="JWT identifier")
 
 
 class ClientRegistrationResponse(BaseModel):
@@ -131,21 +101,3 @@ class ClientRegistrationResponse(BaseModel):
     )
     scope: str = Field(..., description="Space-separated list of scope values")
     client_id_issued_at: int = Field(..., description="Time when client ID was issued")
-
-
-class ErrorResponse(BaseModel):
-    """Standard OAuth error response."""
-
-    error: str = Field(..., description="Error code")
-    error_description: Optional[str] = Field(
-        None, description="Human-readable error description"
-    )
-    error_uri: Optional[str] = Field(
-        None, description="URI for more information about the error"
-    )
-
-
-# Union type for all possible token requests
-TokenRequest = Union[
-    AuthorizationCodeTokenRequest, RefreshTokenRequest, ClientCredentialsTokenRequest
-]
