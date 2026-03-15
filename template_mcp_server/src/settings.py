@@ -278,6 +278,26 @@ class Settings(BaseSettings):
         },
     )
 
+    # Web Search Configuration
+    TAVILY_API_KEY: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "TAVILY_API_KEY",
+            "description": "API key for Tavily web search service",
+            "sensitive": True,
+        },
+    )
+    SEARCH_MAX_RESULTS: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        json_schema_extra={
+            "env": "SEARCH_MAX_RESULTS",
+            "description": "Default maximum results per search query",
+            "example": 5,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
