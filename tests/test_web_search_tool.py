@@ -5,11 +5,15 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from template_mcp_server.src.settings import settings
 from template_mcp_server.src.tools.web_search_tool import (
     _search_with_retry,
     _truncate_snippet,
     web_search,
 )
+
+_SETTINGS_PATH = "template_mcp_server.src.tools.web_search_tool.settings"
+_CLIENT_PATH = "template_mcp_server.src.tools.web_search_tool.AsyncTavilyClient"
 
 
 class TestTruncateSnippet:
@@ -81,9 +85,7 @@ class TestSearchWithRetry:
         client = AsyncMock()
         client.search.side_effect = RuntimeError("persistent failure")
         with pytest.raises(RuntimeError, match="persistent failure"):
-            asyncio.run(
-                _search_with_retry(client, "test", max_results=3, timeout=5.0)
-            )
+            asyncio.run(_search_with_retry(client, "test", max_results=3, timeout=5.0))
         assert client.search.call_count == 3
 
     def test_raises_timeout_after_all_retries(self):
@@ -91,9 +93,7 @@ class TestSearchWithRetry:
         client = AsyncMock()
         client.search.side_effect = asyncio.TimeoutError()
         with pytest.raises(asyncio.TimeoutError):
-            asyncio.run(
-                _search_with_retry(client, "test", max_results=3, timeout=0.01)
-            )
+            asyncio.run(_search_with_retry(client, "test", max_results=3, timeout=0.01))
         assert client.search.call_count == 3
 
 
@@ -106,15 +106,15 @@ class TestWebSearch:
         assert result["status"] == "error"
         assert "At least one search query" in result["error"]
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": ""})
+    @patch.object(settings, "TAVILY_API_KEY", "")
     def test_missing_api_key_returns_error(self):
         """Missing TAVILY_API_KEY returns an error."""
         result = asyncio.run(web_search(queries=["test query"]))
         assert result["status"] == "error"
         assert "TAVILY_API_KEY" in result["error"]
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": "test-key"})
-    @patch("tavily.AsyncTavilyClient")
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
     def test_single_query_success(self, mock_client_cls):
         """Successful search with a single query returns results."""
         mock_client = AsyncMock()
@@ -145,8 +145,8 @@ class TestWebSearch:
         assert result["results"][0]["url"] == "https://example.com/1"
         assert result["results"][0]["score"] == 0.95
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": "test-key"})
-    @patch("tavily.AsyncTavilyClient")
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
     def test_deduplicates_results(self, mock_client_cls):
         """Duplicate URLs across queries are deduplicated."""
         mock_client = AsyncMock()
@@ -177,8 +177,8 @@ class TestWebSearch:
         assert result["status"] == "success"
         assert result["total_results"] == 1
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": "test-key"})
-    @patch("tavily.AsyncTavilyClient")
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
     def test_handles_partial_failure(self, mock_client_cls):
         """One failing query doesn't break the whole search."""
         mock_client = AsyncMock()
@@ -201,8 +201,8 @@ class TestWebSearch:
         assert result["status"] == "success"
         assert result["total_results"] == 1
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": "test-key"})
-    @patch("tavily.AsyncTavilyClient")
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
     def test_skips_items_with_empty_url(self, mock_client_cls):
         """Results with empty URLs are excluded."""
         mock_client = AsyncMock()
@@ -223,8 +223,8 @@ class TestWebSearch:
         assert result["total_results"] == 1
         assert result["results"][0]["url"] == "https://example.com/real"
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": "test-key"})
-    @patch("tavily.AsyncTavilyClient")
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
     def test_snippet_truncation(self, mock_client_cls):
         """Long content is truncated via _truncate_snippet."""
         mock_client = AsyncMock()
@@ -246,7 +246,7 @@ class TestWebSearch:
         assert len(snippet) <= 4000
         assert snippet.endswith("...")
 
-    @patch.dict("os.environ", {"TAVILY_API_KEY": ""})
+    @patch.object(settings, "TAVILY_API_KEY", "")
     def test_max_results_clamped(self):
         """max_results is clamped between 1 and 10."""
         result = asyncio.run(web_search(queries=["test"], max_results=0))
@@ -261,13 +261,11 @@ class TestWebSearch:
         assert "error" in result
         assert "message" in result
 
-    @patch.dict(
-        "os.environ",
-        {"TAVILY_API_KEY": "test-key", "WEB_SEARCH_TIMEOUT": "2.5"},
-    )
-    @patch("tavily.AsyncTavilyClient")
-    def test_custom_timeout_from_env(self, mock_client_cls):
-        """WEB_SEARCH_TIMEOUT env var overrides default timeout."""
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "WEB_SEARCH_TIMEOUT", 2.5)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
+    def test_custom_timeout_from_settings(self, mock_client_cls):
+        """WEB_SEARCH_TIMEOUT setting overrides default timeout."""
         mock_client = AsyncMock()
         mock_client.search.return_value = {"results": []}
         mock_client_cls.return_value = mock_client
@@ -275,13 +273,11 @@ class TestWebSearch:
         result = asyncio.run(web_search(queries=["test"]))
         assert result["status"] == "success"
 
-    @patch.dict(
-        "os.environ",
-        {"TAVILY_API_KEY": "test-key", "WEB_SEARCH_MAX_SNIPPET_LENGTH": "50"},
-    )
-    @patch("tavily.AsyncTavilyClient")
-    def test_custom_snippet_length_from_env(self, mock_client_cls):
-        """WEB_SEARCH_MAX_SNIPPET_LENGTH env var overrides default."""
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "WEB_SEARCH_MAX_SNIPPET_LENGTH", 50)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
+    def test_custom_snippet_length_from_settings(self, mock_client_cls):
+        """WEB_SEARCH_MAX_SNIPPET_LENGTH setting overrides default."""
         mock_client = AsyncMock()
         mock_client.search.return_value = {
             "results": [
@@ -296,3 +292,16 @@ class TestWebSearch:
 
         result = asyncio.run(web_search(queries=["test"]))
         assert len(result["results"][0]["snippet"]) <= 50
+
+    @patch(_CLIENT_PATH)
+    @patch.object(settings, "TAVILY_API_KEY", "test-key")
+    def test_all_queries_fail(self, mock_client_cls):
+        """When all queries return exceptions, result has zero items."""
+        mock_client = AsyncMock()
+        mock_client.search.side_effect = Exception("Total failure")
+        mock_client_cls.return_value = mock_client
+
+        result = asyncio.run(web_search(queries=["fail1", "fail2"]))
+
+        assert result["status"] == "success"
+        assert result["total_results"] == 0

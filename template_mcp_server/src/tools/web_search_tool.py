@@ -5,16 +5,20 @@ supporting multiple parallel queries with result deduplication.
 """
 
 import asyncio
-import os
 from typing import Any, Dict, List
 
+from template_mcp_server.src.settings import settings
 from template_mcp_server.utils.pylogger import get_python_logger
+
+try:
+    from tavily import AsyncTavilyClient
+except ImportError:
+    AsyncTavilyClient = None
 
 logger = get_python_logger()
 
-DEFAULT_TIMEOUT_SECONDS = 15.0
-DEFAULT_MAX_SNIPPET_LENGTH = 4000
 RETRY_DELAYS_SECONDS = (1, 2)
+_SEARCH_CONCURRENCY = 5
 
 
 async def _search_with_retry(
@@ -65,7 +69,7 @@ async def web_search(
     INPUT_DESCRIPTION=queries: list of search strings, max_results: results per query (default 5)
     OUTPUT_DESCRIPTION=Dictionary with status, results list (title, url, snippet, score), and query metadata
     EXAMPLES=web_search(["Python 3.12 new features"]), web_search(["LangGraph tutorial", "MCP protocol"])
-    PREREQUISITES=TAVILY_API_KEY environment variable must be set
+    PREREQUISITES=TAVILY_API_KEY must be configured in settings
     RELATED_TOOLS=None
 
     I/O-bound operation - uses async for network requests.
@@ -80,10 +84,8 @@ async def web_search(
     Raises:
         ValueError: If queries list is empty or max_results is out of range
     """
-    timeout = float(os.environ.get("WEB_SEARCH_TIMEOUT", DEFAULT_TIMEOUT_SECONDS))
-    max_snippet_length = int(
-        os.environ.get("WEB_SEARCH_MAX_SNIPPET_LENGTH", str(DEFAULT_MAX_SNIPPET_LENGTH))
-    )
+    timeout = settings.WEB_SEARCH_TIMEOUT
+    max_snippet_length = settings.WEB_SEARCH_MAX_SNIPPET_LENGTH
 
     try:
         if not queries:
@@ -91,28 +93,37 @@ async def web_search(
 
         max_results = max(1, min(max_results, 10))
 
-        api_key = os.environ.get("TAVILY_API_KEY", "")
+        api_key = settings.TAVILY_API_KEY
         if not api_key:
             return {
                 "status": "error",
-                "error": "TAVILY_API_KEY environment variable is not set",
+                "error": "TAVILY_API_KEY is not configured",
                 "message": "Web search requires a Tavily API key",
             }
 
-        from tavily import AsyncTavilyClient
+        if AsyncTavilyClient is None:
+            return {
+                "status": "error",
+                "error": "tavily-python package is not installed",
+                "message": "Install tavily-python to use web search",
+            }
 
         client = AsyncTavilyClient(api_key=api_key)
 
-        tasks = [
-            _search_with_retry(client, query, max_results, timeout) for query in queries
-        ]
+        semaphore = asyncio.Semaphore(_SEARCH_CONCURRENCY)
+
+        async def _limited_search(query: str) -> Dict[str, Any]:
+            async with semaphore:
+                return await _search_with_retry(client, query, max_results, timeout)
+
+        tasks = [_limited_search(query) for query in queries]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         seen_urls: set[str] = set()
         deduplicated: List[Dict[str, Any]] = []
 
         for i, result in enumerate(raw_results):
-            if isinstance(result, (Exception, BaseException)):
+            if isinstance(result, BaseException):
                 logger.warning(f"Search query failed: {queries[i]} - {result}")
                 continue
 
@@ -146,7 +157,7 @@ async def web_search(
         }
 
     except Exception as e:
-        logger.error(f"Error in web_search tool: {e}")
+        logger.exception("Error in web_search tool: %s", e)
         return {
             "status": "error",
             "error": str(e),
