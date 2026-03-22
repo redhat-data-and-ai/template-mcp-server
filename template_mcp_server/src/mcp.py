@@ -17,6 +17,7 @@ from template_mcp_server.src.tools.multiply_tool import (
     multiply_numbers,
 )
 from template_mcp_server.src.tools.web_search_tool import web_search
+from template_mcp_server.src.tools.whimsify_tool import whimsify
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -56,13 +57,14 @@ class TemplateMCPServer:
         In tools-first architecture, the server only provides tools.
         Currently includes:
         - multiply_numbers: Basic arithmetic operations
-        - generate_code_review_prompt: Code review prompt generation
-        - get_redhat_logo: Red Hat logo retrieval as base64
-        - knowledge_search: Knowledge base search for deep research testing
+        - bmi_tool: BMI calculator
         - web_search: Web search using Tavily API for current information
+        - email_tool: Email operations
+        - whimsify: Whimsify operation (x+x)/2
         """
         # Register all the imported tools
         self.mcp.tool()(multiply_numbers)
         self.mcp.tool()(bmi_tool)
         self.mcp.tool()(web_search)
         self.mcp.tool()(email_tool)
+        self.mcp.tool()(whimsify)
