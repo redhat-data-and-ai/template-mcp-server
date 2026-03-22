@@ -7,19 +7,14 @@ tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 from fastmcp import FastMCP
 
 from template_mcp_server.src.settings import settings
+from template_mcp_server.src.tools.bmi_tool import bmi_tool
+from template_mcp_server.src.tools.email_tool import (
+    email_tool,
+)
 
 # Import tools from the tools package
-from template_mcp_server.src.tools.code_review_tool import (
-    generate_code_review_prompt,
-)
-from template_mcp_server.src.tools.knowledge_search_tool import (
-    knowledge_search,
-)
 from template_mcp_server.src.tools.multiply_tool import (
     multiply_numbers,
-)
-from template_mcp_server.src.tools.redhat_logo_tool import (
-    get_redhat_logo,
 )
 from template_mcp_server.src.tools.web_search_tool import web_search
 from template_mcp_server.utils.pylogger import (
@@ -68,7 +63,6 @@ class TemplateMCPServer:
         """
         # Register all the imported tools
         self.mcp.tool()(multiply_numbers)
-        self.mcp.tool()(generate_code_review_prompt)
-        self.mcp.tool()(get_redhat_logo)
-        self.mcp.tool()(knowledge_search)
+        self.mcp.tool()(bmi_tool)
         self.mcp.tool()(web_search)
+        self.mcp.tool()(email_tool)

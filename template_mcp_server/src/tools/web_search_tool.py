@@ -62,16 +62,6 @@ async def web_search(
 ) -> Dict[str, Any]:
     """Search the web for information using the Tavily API.
 
-    TOOL_NAME=web_search
-    DISPLAY_NAME=Web Search
-    USECASE=Search the web for current information across multiple queries in parallel
-    INSTRUCTIONS=1. Provide one or more search queries, 2. Call function, 3. Receive deduplicated results
-    INPUT_DESCRIPTION=queries: list of search strings, max_results: results per query (default 5)
-    OUTPUT_DESCRIPTION=Dictionary with status, results list (title, url, snippet, score), and query metadata
-    EXAMPLES=web_search(["Python 3.12 new features"]), web_search(["LangGraph tutorial", "MCP protocol"])
-    PREREQUISITES=TAVILY_API_KEY must be configured in settings
-    RELATED_TOOLS=None
-
     I/O-bound operation - uses async for network requests.
 
     Args:
