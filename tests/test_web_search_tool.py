@@ -1,4 +1,4 @@
-"""Tests for the web_search MCP tool."""
+"""Tests for the search_web MCP tool."""
 
 import asyncio
 from unittest.mock import AsyncMock, patch
@@ -9,7 +9,7 @@ from template_mcp_server.src.settings import settings
 from template_mcp_server.src.tools.web_search_tool import (
     _search_with_retry,
     _truncate_snippet,
-    web_search,
+    search_web,
 )
 
 _SETTINGS_PATH = "template_mcp_server.src.tools.web_search_tool.settings"
@@ -98,18 +98,18 @@ class TestSearchWithRetry:
 
 
 class TestWebSearch:
-    """Test the web_search tool."""
+    """Test the search_web tool."""
 
     def test_empty_queries_returns_error(self):
         """Empty queries list returns a validation error."""
-        result = asyncio.run(web_search(queries=[]))
+        result = asyncio.run(search_web(queries=[]))
         assert result["status"] == "error"
         assert "At least one search query" in result["error"]
 
     @patch.object(settings, "TAVILY_API_KEY", "")
     def test_missing_api_key_returns_error(self):
         """Missing TAVILY_API_KEY returns an error."""
-        result = asyncio.run(web_search(queries=["test query"]))
+        result = asyncio.run(search_web(queries=["test query"]))
         assert result["status"] == "error"
         assert "TAVILY_API_KEY" in result["error"]
 
@@ -136,7 +136,7 @@ class TestWebSearch:
         }
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["python tutorial"]))
+        result = asyncio.run(search_web(queries=["python tutorial"]))
 
         assert result["status"] == "success"
         assert result["total_results"] == 2
@@ -172,7 +172,7 @@ class TestWebSearch:
         ]
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["query 1", "query 2"]))
+        result = asyncio.run(search_web(queries=["query 1", "query 2"]))
 
         assert result["status"] == "success"
         assert result["total_results"] == 1
@@ -196,7 +196,7 @@ class TestWebSearch:
         ]
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["fail query", "ok query"]))
+        result = asyncio.run(search_web(queries=["fail query", "ok query"]))
 
         assert result["status"] == "success"
         assert result["total_results"] == 1
@@ -218,7 +218,7 @@ class TestWebSearch:
         }
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["test"]))
+        result = asyncio.run(search_web(queries=["test"]))
 
         assert result["total_results"] == 1
         assert result["results"][0]["url"] == "https://example.com/real"
@@ -240,7 +240,7 @@ class TestWebSearch:
         }
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["test"]))
+        result = asyncio.run(search_web(queries=["test"]))
 
         snippet = result["results"][0]["snippet"]
         assert len(snippet) <= 4000
@@ -249,13 +249,13 @@ class TestWebSearch:
     @patch.object(settings, "TAVILY_API_KEY", "")
     def test_max_results_clamped(self):
         """max_results is clamped between 1 and 10."""
-        result = asyncio.run(web_search(queries=["test"], max_results=0))
+        result = asyncio.run(search_web(queries=["test"], max_results=0))
         assert result["status"] == "error"
         assert "TAVILY_API_KEY" in result["error"]
 
     def test_return_structure_on_error(self):
         """Error responses have status, error, and message keys."""
-        result = asyncio.run(web_search(queries=[]))
+        result = asyncio.run(search_web(queries=[]))
         assert isinstance(result, dict)
         assert "status" in result
         assert "error" in result
@@ -270,7 +270,7 @@ class TestWebSearch:
         mock_client.search.return_value = {"results": []}
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["test"]))
+        result = asyncio.run(search_web(queries=["test"]))
         assert result["status"] == "success"
 
     @patch(_CLIENT_PATH)
@@ -290,7 +290,7 @@ class TestWebSearch:
         }
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["test"]))
+        result = asyncio.run(search_web(queries=["test"]))
         assert len(result["results"][0]["snippet"]) <= 50
 
     @patch(_CLIENT_PATH)
@@ -301,7 +301,7 @@ class TestWebSearch:
         mock_client.search.side_effect = Exception("Total failure")
         mock_client_cls.return_value = mock_client
 
-        result = asyncio.run(web_search(queries=["fail1", "fail2"]))
+        result = asyncio.run(search_web(queries=["fail1", "fail2"]))
 
         assert result["status"] == "success"
         assert result["total_results"] == 0

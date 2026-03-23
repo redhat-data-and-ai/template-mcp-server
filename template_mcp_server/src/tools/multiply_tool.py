@@ -3,7 +3,7 @@
 This tool demonstrates basic arithmetic functionality by multiplying two numbers.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from template_mcp_server.utils.pylogger import get_python_logger
 
@@ -11,8 +11,8 @@ logger = get_python_logger()
 
 
 def multiply_numbers(
-    a: float,
-    b: float,
+    a: Union[float, int],
+    b: Union[float, int],
 ) -> Dict[str, Any]:
     """Multiply two numbers with comprehensive tool metadata.
 
@@ -24,20 +24,21 @@ def multiply_numbers(
 
     Returns:
         Dictionary containing the result of multiplication
-
-    Raises:
-        ValueError: If either input is not a valid number
     """
-    try:
-        # Validate inputs
-        if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
-            raise ValueError("Both inputs must be numbers")
+    logger.info(
+        "multiply_numbers invoked",
+        extra={"input": {"a": a, "b": b}},
+    )
 
+    try:
         result = a * b
 
-        logger.info(f"Multiply tool called: {a} * {b} = {result}")
+        logger.info(
+            "Multiplication completed successfully",
+            extra={"input": {"a": a, "b": b}, "output": {"result": result}},
+        )
 
-        return {
+        output = {
             "status": "success",
             "operation": "multiplication",
             "a": a,
@@ -46,10 +47,18 @@ def multiply_numbers(
             "message": f"Successfully multiplied {a} and {b}",
         }
 
+        logger.debug("multiply_numbers output", extra={"output": output})
+        return output
+
     except Exception as e:
-        logger.error(f"Error in multiply tool: {e}")
-        return {
+        logger.exception(
+            "Error in multiply_numbers",
+            extra={"input": {"a": a, "b": b}, "error": str(e)},
+        )
+        error_output = {
             "status": "error",
             "error": str(e),
             "message": "Failed to perform multiplication",
         }
+        logger.debug("multiply_numbers error output", extra={"output": error_output})
+        return error_output

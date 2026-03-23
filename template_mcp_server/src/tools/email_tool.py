@@ -30,18 +30,35 @@ def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
     Returns:
         str: Status message indicating success or error
     """
+    logger.info(
+        "invoke_email_agent called",
+        extra={
+            "input": {
+                "email_id": email_id,
+                "subject": subject,
+                "body_length": len(body),
+            }
+        },
+    )
+
     try:
         # Validate API key
         api_key = settings.RESEND_API_KEY
         if not api_key:
             error_msg = "RESEND_API_KEY is not configured"
-            logger.error(error_msg)
+            logger.error(
+                "API key validation failed",
+                extra={"error": error_msg},
+            )
             return f"Error sending email: {error_msg}"
 
         # Check if resend package is installed
         if resend is None:
             error_msg = "resend package is not installed"
-            logger.error(error_msg)
+            logger.error(
+                "Package validation failed",
+                extra={"error": error_msg},
+            )
             return f"Error sending email: {error_msg}"
 
         # Set API key
@@ -59,20 +76,42 @@ def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
             "html": body,
         }
 
-        logger.info(f"Sending email with params: {params} to {email_id}")
+        logger.info(
+            "Sending email via Resend API",
+            extra={
+                "email_params": {
+                    "from": from_email,
+                    "to": to_email,
+                    "subject": subject,
+                    "body_length": len(body),
+                }
+            },
+        )
 
         # Send the email
-        resend.Emails.send(params)
+        response = resend.Emails.send(params)
 
-        logger.info("Email sent successfully.")
+        logger.info(
+            "Email sent successfully",
+            extra={
+                "input": {"email_id": email_id, "subject": subject},
+                "output": {"status": "success", "response": str(response)},
+            },
+        )
         return "Email sent successfully."
 
     except Exception as e:
-        logger.error(f"Error sending email: {e}")
+        logger.exception(
+            "Error sending email",
+            extra={
+                "input": {"email_id": email_id, "subject": subject},
+                "error": str(e),
+            },
+        )
         return f"Error sending email: {e}"
 
 
-async def email_tool(email_id: str, subject: str, body: str) -> str:
+async def send_email(email_id: str, subject: str, body: str) -> str:
     """Send emails through the organization's email system to recipients.
 
     This tool allows composing and sending emails with customized subject lines and content.
@@ -98,8 +137,16 @@ async def email_tool(email_id: str, subject: str, body: str) -> str:
     Returns:
         str: A text string containing the email delivery status and confirmation
     """
-    logger.info("Invoking Email Agent tool")
-    logger.info(f"Email ID: {email_id}, Subject: {subject}, Body: {body}")
+    logger.info(
+        "send_email invoked",
+        extra={
+            "input": {
+                "email_id": email_id,
+                "subject": subject,
+                "body_length": len(body),
+            }
+        },
+    )
 
     # Run the synchronous email send in an executor to avoid blocking
     loop = asyncio.get_event_loop()
@@ -107,6 +154,13 @@ async def email_tool(email_id: str, subject: str, body: str) -> str:
         None, invoke_email_agent, email_id, subject, body
     )
 
-    logger.info(f"Response: {response}")
-    logger.info("Email Agent tool invoked")
+    logger.info(
+        "send_email completed",
+        extra={
+            "input": {"email_id": email_id, "subject": subject},
+            "output": {"response": response},
+        },
+    )
+
+    logger.debug("send_email output", extra={"output": response})
     return response

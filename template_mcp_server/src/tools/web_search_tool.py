@@ -28,24 +28,65 @@ async def _search_with_retry(
     timeout: float,
 ) -> Dict[str, Any]:
     """Execute a single search with timeout and exponential backoff retries."""
+    logger.debug(
+        "Starting search with retry",
+        extra={
+            "input": {"query": query, "max_results": max_results, "timeout": timeout}
+        },
+    )
+
     last_error: BaseException | None = None
     for attempt in range(3):
         try:
+            logger.debug(
+                "Executing search attempt",
+                extra={"query": query, "attempt": attempt + 1, "max_attempts": 3},
+            )
             coro = client.search(query, max_results=max_results)
-            return await asyncio.wait_for(coro, timeout=timeout)
+            result = await asyncio.wait_for(coro, timeout=timeout)
+            logger.debug(
+                "Search attempt succeeded",
+                extra={
+                    "query": query,
+                    "attempt": attempt + 1,
+                    "results_count": len(result.get("results", [])),
+                },
+            )
+            return result
         except asyncio.TimeoutError as e:
             last_error = e
             logger.warning(
-                f"Search timeout (attempt {attempt + 1}/3) for query: {query!r}"
+                "Search timeout",
+                extra={
+                    "query": query,
+                    "attempt": attempt + 1,
+                    "max_attempts": 3,
+                    "timeout": timeout,
+                },
             )
         except Exception as e:
             last_error = e
             logger.warning(
-                f"Search failed (attempt {attempt + 1}/3) for query: {query!r} - {e}"
+                "Search attempt failed",
+                extra={
+                    "query": query,
+                    "attempt": attempt + 1,
+                    "max_attempts": 3,
+                    "error": str(e),
+                },
             )
         if attempt < 2:
             delay = RETRY_DELAYS_SECONDS[attempt]
+            logger.debug(
+                "Retrying after delay",
+                extra={"query": query, "delay_seconds": delay},
+            )
             await asyncio.sleep(delay)
+
+    logger.error(
+        "All search attempts failed",
+        extra={"query": query, "max_attempts": 3, "error": str(last_error)},
+    )
     raise last_error  # type: ignore[misc]
 
 
@@ -56,7 +97,7 @@ def _truncate_snippet(content: str, max_length: int) -> str:
     return content[: max_length - 3].rstrip() + "..."
 
 
-async def web_search(
+async def search_web(
     queries: List[str],
     max_results: int = 5,
 ) -> Dict[str, Any]:
@@ -77,47 +118,99 @@ async def web_search(
     timeout = settings.WEB_SEARCH_TIMEOUT
     max_snippet_length = settings.WEB_SEARCH_MAX_SNIPPET_LENGTH
 
+    logger.info(
+        "search_web invoked",
+        extra={
+            "input": {
+                "queries": queries,
+                "max_results": max_results,
+                "timeout": timeout,
+                "max_snippet_length": max_snippet_length,
+            }
+        },
+    )
+
     try:
         if not queries:
-            raise ValueError("At least one search query is required")
+            error_msg = "At least one search query is required"
+            logger.error(
+                "Input validation failed",
+                extra={"error": error_msg, "queries": queries},
+            )
+            raise ValueError(error_msg)
 
         max_results = max(1, min(max_results, 10))
+        logger.debug(
+            "max_results normalized",
+            extra={"max_results": max_results},
+        )
 
         api_key = settings.TAVILY_API_KEY
         if not api_key:
-            return {
+            error_result = {
                 "status": "error",
                 "error": "TAVILY_API_KEY is not configured",
                 "message": "Web search requires a Tavily API key",
             }
+            logger.error(
+                "API key validation failed",
+                extra={"output": error_result},
+            )
+            return error_result
 
         if AsyncTavilyClient is None:
-            return {
+            error_result = {
                 "status": "error",
                 "error": "tavily-python package is not installed",
                 "message": "Install tavily-python to use web search",
             }
+            logger.error(
+                "Package validation failed",
+                extra={"output": error_result},
+            )
+            return error_result
 
         client = AsyncTavilyClient(api_key=api_key)
+        logger.debug("Tavily client initialized")
 
         semaphore = asyncio.Semaphore(_SEARCH_CONCURRENCY)
+        logger.debug(
+            "Search semaphore created",
+            extra={"concurrency_limit": _SEARCH_CONCURRENCY},
+        )
 
         async def _limited_search(query: str) -> Dict[str, Any]:
             async with semaphore:
                 return await _search_with_retry(client, query, max_results, timeout)
 
+        logger.info(
+            "Executing parallel web searches",
+            extra={"num_queries": len(queries), "queries": queries},
+        )
+
         tasks = [_limited_search(query) for query in queries]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        logger.debug(
+            "Raw search results received",
+            extra={"num_results": len(raw_results)},
+        )
+
         seen_urls: set[str] = set()
         deduplicated: List[Dict[str, Any]] = []
+        failed_queries = 0
 
         for i, result in enumerate(raw_results):
             if isinstance(result, BaseException):
-                logger.warning(f"Search query failed: {queries[i]} - {result}")
+                failed_queries += 1
+                logger.warning(
+                    "Search query failed",
+                    extra={"query": queries[i], "error": str(result), "query_index": i},
+                )
                 continue
 
             assert isinstance(result, dict)
+            query_results_count = 0
             for item in result.get("results", []):
                 url = item.get("url", "")
                 if url and url not in seen_urls:
@@ -132,13 +225,34 @@ async def web_search(
                             "query": queries[i],
                         }
                     )
+                    query_results_count += 1
+
+            logger.debug(
+                "Query processed",
+                extra={
+                    "query": queries[i],
+                    "results_count": query_results_count,
+                    "query_index": i,
+                },
+            )
 
         logger.info(
-            f"Web search completed: {len(queries)} queries, "
-            f"{len(deduplicated)} unique results"
+            "Web search completed successfully",
+            extra={
+                "input": {
+                    "num_queries": len(queries),
+                    "queries": queries,
+                    "max_results": max_results,
+                },
+                "output": {
+                    "total_unique_results": len(deduplicated),
+                    "failed_queries": failed_queries,
+                    "successful_queries": len(queries) - failed_queries,
+                },
+            },
         )
 
-        return {
+        output = {
             "status": "success",
             "queries": queries,
             "total_results": len(deduplicated),
@@ -146,10 +260,21 @@ async def web_search(
             "message": f"Found {len(deduplicated)} results across {len(queries)} queries",
         }
 
+        logger.debug("search_web output", extra={"output": output})
+        return output
+
     except Exception as e:
-        logger.exception("Error in web_search tool: %s", e)
-        return {
+        logger.exception(
+            "Error in search_web",
+            extra={
+                "input": {"queries": queries, "max_results": max_results},
+                "error": str(e),
+            },
+        )
+        error_output = {
             "status": "error",
             "error": str(e),
             "message": "Failed to perform web search",
         }
+        logger.debug("search_web error output", extra={"output": error_output})
+        return error_output

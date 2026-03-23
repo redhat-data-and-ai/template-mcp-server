@@ -11,7 +11,7 @@ from template_mcp_server.utils.pylogger import get_python_logger
 logger = get_python_logger()
 
 
-def bmi_tool(height: str, weight: str) -> Dict[str, Any]:
+def calculate_bmi(height: str, weight: str) -> Dict[str, Any]:
     """Calculate Body Mass Index (BMI) based on height and weight inputs.
 
     This tool provides a BMI calculation along with a basic health category classification
@@ -30,19 +30,47 @@ def bmi_tool(height: str, weight: str) -> Dict[str, Any]:
     Raises:
         ValueError: If inputs are not valid numbers or are out of reasonable range
     """
+    logger.info(
+        "calculate_bmi invoked",
+        extra={"input": {"height": height, "weight": weight}},
+    )
+
     try:
         # Validate and convert inputs
         try:
             height_cm = float(height)
             weight_kg = float(weight)
-        except (ValueError, TypeError):
-            raise ValueError("Height and weight must be valid numbers")
+            logger.debug(
+                "Input conversion successful",
+                extra={"height_cm": height_cm, "weight_kg": weight_kg},
+            )
+        except (ValueError, TypeError) as e:
+            error_msg = "Height and weight must be valid numbers"
+            logger.error(
+                "Input conversion failed",
+                extra={
+                    "error": error_msg,
+                    "input": {"height": height, "weight": weight},
+                    "exception": str(e),
+                },
+            )
+            raise ValueError(error_msg)
 
         # Validate reasonable ranges
         if height_cm <= 0 or height_cm > 300:
-            raise ValueError("Height must be between 0 and 300 cm")
+            error_msg = "Height must be between 0 and 300 cm"
+            logger.error(
+                "Height validation failed",
+                extra={"error": error_msg, "height_cm": height_cm},
+            )
+            raise ValueError(error_msg)
         if weight_kg <= 0 or weight_kg > 500:
-            raise ValueError("Weight must be between 0 and 500 kg")
+            error_msg = "Weight must be between 0 and 500 kg"
+            logger.error(
+                "Weight validation failed",
+                extra={"error": error_msg, "weight_kg": weight_kg},
+            )
+            raise ValueError(error_msg)
 
         # Convert height from cm to meters
         height_m = height_cm / 100
@@ -61,11 +89,14 @@ def bmi_tool(height: str, weight: str) -> Dict[str, Any]:
             category = "Obese"
 
         logger.info(
-            f"BMI tool called: height={height_cm}cm, weight={weight_kg}kg, "
-            f"BMI={bmi:.2f}, category={category}"
+            "BMI calculation completed successfully",
+            extra={
+                "input": {"height_cm": height_cm, "weight_kg": weight_kg},
+                "output": {"bmi": round(bmi, 2), "category": category},
+            },
         )
 
-        return {
+        output = {
             "status": "success",
             "operation": "bmi_calculation",
             "height_cm": height_cm,
@@ -75,10 +106,18 @@ def bmi_tool(height: str, weight: str) -> Dict[str, Any]:
             "message": f"BMI calculated: {bmi:.2f} ({category})",
         }
 
+        logger.debug("calculate_bmi output", extra={"output": output})
+        return output
+
     except Exception as e:
-        logger.error(f"Error in BMI tool: {e}")
-        return {
+        logger.exception(
+            "Error in calculate_bmi",
+            extra={"input": {"height": height, "weight": weight}, "error": str(e)},
+        )
+        error_output = {
             "status": "error",
             "error": str(e),
             "message": "Failed to calculate BMI",
         }
+        logger.debug("calculate_bmi error output", extra={"output": error_output})
+        return error_output
