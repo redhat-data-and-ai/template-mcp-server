@@ -17,7 +17,6 @@ from template_mcp_server.src.tools.multiply_tool import (
     multiply_numbers,
 )
 from template_mcp_server.src.tools.web_search_tool import search_web
-from template_mcp_server.src.tools.whimsify_tool import whimsify_number
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -60,11 +59,9 @@ class TemplateMCPServer:
         - calculate_bmi: BMI calculator
         - search_web: Web search using Tavily API for current information
         - send_email: Email operations
-        - whimsify_number: Whimsify operation (x+x)/2
         """
         # Register all the imported tools
         self.mcp.tool()(multiply_numbers)
         self.mcp.tool()(calculate_bmi)
         self.mcp.tool()(search_web)
         self.mcp.tool()(send_email)
-        self.mcp.tool()(whimsify_number)
