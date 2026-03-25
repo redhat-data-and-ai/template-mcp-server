@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 
 import httpx
 
-from template_mcp_server.src.oauth.handler import OAuth2Handler, _get_scope
-from template_mcp_server.src.settings import Settings
+from template_mcp_server.src.oauth.handler import OAuth2Handler
+from template_mcp_server.src.settings import Settings, parse_sso_scopes
 
 
 class TestOAuth2Handler:
@@ -15,8 +15,9 @@ class TestOAuth2Handler:
         """Test creating OAuth session without state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
-        mock_settings.SSO_SCOPES = Settings.model_fields["SSO_SCOPES"].default
-        expected_scope = _get_scope()
+        default_scopes = Settings.model_fields["SSO_SCOPES"].default
+        expected_scope = parse_sso_scopes(default_scopes)
+        mock_settings.oauth_scopes = expected_scope
 
         with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
@@ -37,8 +38,9 @@ class TestOAuth2Handler:
         """Test creating OAuth session with state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
-        mock_settings.SSO_SCOPES = Settings.model_fields["SSO_SCOPES"].default
-        expected_scope = _get_scope()
+        default_scopes = Settings.model_fields["SSO_SCOPES"].default
+        expected_scope = parse_sso_scopes(default_scopes)
+        mock_settings.oauth_scopes = expected_scope
 
         with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
@@ -262,21 +264,6 @@ class TestOAuth2Handler:
         result = OAuth2Handler.verify_authorization_header("Basic token123")
         assert result is None
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    def test_scope_default_from_settings(self, mock_settings):
-        """Test scope is parsed from settings.SSO_SCOPES (like other SSO settings)."""
-        mock_settings.SSO_SCOPES = Settings.model_fields["SSO_SCOPES"].default
-        expected = [s.strip() for s in mock_settings.SSO_SCOPES.split(",") if s.strip()]
-        assert _get_scope() == expected
-
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    def test_get_scope_from_env(self, mock_settings):
-        """Test _get_scope() uses settings.SSO_SCOPES when set."""
-        mock_settings.SSO_SCOPES = "email,openid,profile"
-        assert _get_scope() == ["email", "openid", "profile"]
-        mock_settings.SSO_SCOPES = ""
-        assert _get_scope() == []
-
 
 class TestOAuth2HandlerIntegration:
     """Integration tests for OAuth2Handler."""
@@ -292,6 +279,7 @@ class TestOAuth2HandlerIntegration:
         mock_settings.SSO_CLIENT_ID = "client123"
         mock_settings.SSO_CLIENT_SECRET = "secret123"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
+        mock_settings.oauth_scopes = ["openid", "email", "profile"]
 
         # Mock OAuth session
         mock_session = Mock()

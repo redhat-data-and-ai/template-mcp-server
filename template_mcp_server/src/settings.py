@@ -1,5 +1,6 @@
 """Settings for the Template MCP Server."""
 
+from functools import cached_property
 from typing import List, Optional
 
 from dotenv import load_dotenv
@@ -17,6 +18,12 @@ try:
 except Exception as e:
     # Log error but don't fail - environment variables might be set directly
     logger.warning(f"Could not load .env file: {e}")
+
+
+def parse_sso_scopes(sso_scopes: str) -> list[str]:
+    """Parse comma-separated SSO_SCOPES into a list of non-empty scope strings."""
+    raw = sso_scopes or ""
+    return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 class Settings(BaseSettings):
@@ -167,7 +174,10 @@ class Settings(BaseSettings):
         default="email,openid,profile,session:role-any",
         json_schema_extra={
             "env": "SSO_SCOPES",
-            "description": "Comma-separated OAuth scopes to request (e.g. email,openid,profile for Google)",
+            "description": (
+                "Comma-separated OAuth scopes to request (e.g. email,openid,profile for Google). "
+                "When ENABLE_AUTH is True, at least one non-empty scope is required."
+            ),
             "example": "email,openid,profile",
         },
     )
@@ -286,6 +296,11 @@ class Settings(BaseSettings):
         },
     )
 
+    @cached_property
+    def oauth_scopes(self) -> list[str]:
+        """OAuth scopes derived from SSO_SCOPES (computed once per Settings instance)."""
+        return parse_sso_scopes(self.SSO_SCOPES)
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
@@ -317,6 +332,12 @@ def validate_config(settings: Settings) -> None:
     if settings.MCP_TRANSPORT_PROTOCOL not in valid_transport_protocols:
         raise ValueError(
             f"MCP_TRANSPORT_PROTOCOL must be one of {valid_transport_protocols}, got {settings.MCP_TRANSPORT_PROTOCOL}"
+        )
+
+    if settings.ENABLE_AUTH and not parse_sso_scopes(settings.SSO_SCOPES):
+        raise ValueError(
+            'SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True '
+            '(comma-separated, e.g. "email,openid,profile").'
         )
 
 

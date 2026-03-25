@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from template_mcp_server.src.settings import Settings, validate_config
+from template_mcp_server.src.settings import Settings, parse_sso_scopes, validate_config
 
 
 class TestSettings:
@@ -87,6 +87,34 @@ class TestSettings:
         assert hasattr(settings, "MCP_TRANSPORT_PROTOCOL")
         assert hasattr(settings, "PYTHON_LOG_LEVEL")
 
+    def test_parse_sso_scopes(self):
+        """Comma-separated scopes strip whitespace and skip empties."""
+        assert parse_sso_scopes("email, openid , profile") == ["email", "openid", "profile"]
+        assert parse_sso_scopes("") == []
+        assert parse_sso_scopes("  ,  , ") == []
+
+    def test_oauth_scopes_default(self):
+        """oauth_scopes matches SSO_SCOPES when set to the field default."""
+        default = Settings.model_fields["SSO_SCOPES"].default
+        with patch.dict(os.environ, {"SSO_SCOPES": default}):
+            settings = Settings()
+        assert settings.oauth_scopes == parse_sso_scopes(default)
+
+    def test_oauth_scopes_from_env(self):
+        """oauth_scopes reflects SSO_SCOPES from environment."""
+        with patch.dict(os.environ, {"SSO_SCOPES": "a,b,c"}):
+            settings = Settings()
+        assert settings.oauth_scopes == ["a", "b", "c"]
+
+    def test_oauth_scopes_cached_per_instance(self):
+        """oauth_scopes is computed once per Settings instance."""
+        default = Settings.model_fields["SSO_SCOPES"].default
+        with patch.dict(os.environ, {"SSO_SCOPES": default}):
+            settings = Settings()
+        first = settings.oauth_scopes
+        second = settings.oauth_scopes
+        assert first is second
+
 
 class TestValidateConfig:
     """Test the validate_config function."""
@@ -161,3 +189,26 @@ class TestValidateConfig:
             settings = Settings()
             settings.MCP_TRANSPORT_PROTOCOL = protocol
             validate_config(settings)  # Should not raise
+
+    def test_sso_scopes_empty_when_auth_enabled(self):
+        """Empty SSO_SCOPES fails validation when ENABLE_AUTH is True."""
+        settings = Settings()
+        settings.ENABLE_AUTH = True
+        settings.SSO_SCOPES = ""
+        with pytest.raises(ValueError, match="SSO_SCOPES must contain at least one"):
+            validate_config(settings)
+
+    def test_sso_scopes_whitespace_only_when_auth_enabled(self):
+        """Whitespace-only SSO_SCOPES fails validation when ENABLE_AUTH is True."""
+        settings = Settings()
+        settings.ENABLE_AUTH = True
+        settings.SSO_SCOPES = "  ,  ,  "
+        with pytest.raises(ValueError, match="SSO_SCOPES must contain at least one"):
+            validate_config(settings)
+
+    def test_sso_scopes_empty_when_auth_disabled(self):
+        """Empty SSO_SCOPES is allowed when ENABLE_AUTH is False."""
+        settings = Settings()
+        settings.ENABLE_AUTH = False
+        settings.SSO_SCOPES = ""
+        validate_config(settings)
