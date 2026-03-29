@@ -33,7 +33,7 @@ dependencies = [
     "fastapi==0.116.0",
     "uvicorn==0.35.0",
     "asyncpg==0.30.0",
-    "psycopg==3.2.3",
+    "psycopg==3.3.3",
     "itsdangerous==2.2.0",
     "requests-oauthlib==2.0.0",
 ]
