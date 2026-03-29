@@ -31,7 +31,7 @@ dependencies = [
     "structlog==25.4.0",
     "python-dotenv==1.1.1",
     "fastapi==0.116.0",
-    "uvicorn==0.35.0",
+    "uvicorn==0.41.0",
     "asyncpg==0.30.0",
     "psycopg==3.2.3",
     "itsdangerous==2.2.0",
