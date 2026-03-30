@@ -122,7 +122,7 @@ system_prompt = f"""
 
 
 @asynccontextmanager
-async def get_agent_redhat():
+async def get_agent():
     """Create and yield a fully initialized LangGraph agent with MCP integration.
 
     This function sets up a LangGraph ReAct agent that connects to the template
@@ -143,7 +143,7 @@ async def get_agent_redhat():
         and other operations provided by the template MCP server.
 
     Example:
-        async with get_agent_redhat() as agent:
+        async with get_agent() as agent:
             result = await agent.ainvoke({
                 "messages": [{"role": "user", "content": "What is 5 * 3?"}]
             })
@@ -160,9 +160,8 @@ async def get_agent_redhat():
     )
 
     tools = await client.get_tools()
-    # resources = await client.get_resources(tools)
 
-    agent_redhat = create_react_agent(
+    agent = create_react_agent(
         model=ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0.5,
@@ -170,7 +169,7 @@ async def get_agent_redhat():
         prompt=system_prompt,
         tools=tools,
     )
-    yield agent_redhat
+    yield agent
 
 
 async def demonstrate_tool_calls():
@@ -191,7 +190,7 @@ async def demonstrate_tool_calls():
     print("🔧 Tool Call Examples")
     print("=" * 60)
 
-    async with get_agent_redhat() as agent:
+    async with get_agent() as agent:
         # Example 1: Mathematical operation
         print("\n📊 Example 1: Mathematical Operation")
         print("Question: What is 15 multiplied by 7?")
