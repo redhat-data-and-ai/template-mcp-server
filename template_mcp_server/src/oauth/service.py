@@ -48,12 +48,16 @@ def verify_code_challenge(code_verifier: str, code_challenge: str) -> bool:
     Returns:
         bool: True if verification succeeds, False otherwise
     """
-    if not code_verifier or not code_challenge:
-        return False
     try:
+        # Compute SHA256 hash of the code verifier
         hash_bytes = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+
+        # Base64url encode the hash (without padding)
         computed_challenge = base64url_encode(hash_bytes)
+
+        # Compare with the provided code challenge
         return computed_challenge == code_challenge
+
     except Exception as e:
         logger.error(f"PKCE verification failed with error: {e}")
         return False
