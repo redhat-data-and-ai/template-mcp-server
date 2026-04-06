@@ -6,23 +6,23 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/redhat-data-and-ai/template-mcp-server)
 
-A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
-
-The template includes five MCP tools: a multiply calculator, a code review prompt generator, a Red Hat logo tool, a knowledge search engine, and a web search tool powered by the Tavily API. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
+A production-ready template for building Model Context Protocol (MCP) servers with Python and FastMCP. Includes Deep Agent support, external API integrations, and enterprise deployment capabilities.
 
 ## Features
 
-- **FastMCP + FastAPI** with multiple transport protocols (HTTP, SSE, streamable-HTTP)
-- **Five MCP tools**: multiply calculator, code review prompt, Red Hat logo, knowledge search, web search (Tavily)
-- **Web search via Tavily API**: Parallel query execution, deduplication, retry with backoff
-- **Knowledge search**: In-memory knowledge base with category filtering and relevance scoring
-- **Pydantic configuration** via environment variables
-- **Structured JSON logging** with structlog
-- **SSL/TLS support** for secure deployments
-- **Container-ready** with Red Hat UBI base image
-- **OpenShift deployment** manifests included
-- **Full CI/CD** with GitHub Actions (tests, linting, security, releases)
-- **OAuth integration** with PostgreSQL token storage
+**MCP Tools:**
+- `calculate_bmi` - Health metrics calculator
+- `search_web` - Tavily-powered web search with parallel queries and deduplication
+- `send_email` - Email delivery via Resend API
+
+**Infrastructure:**
+- Multiple transport protocols (HTTP, SSE, streamable-HTTP)
+- Structured JSON logging with structlog
+- OAuth authentication + PostgreSQL token storage
+- SSL/TLS support
+- Container-ready with Red Hat UBI
+- OpenShift deployment manifests
+- CI/CD with GitHub Actions
 
 ## Quick Start
 
@@ -131,9 +131,18 @@ The output should be empty (or only match this README section itself).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TAVILY_API_KEY` | `None` | Tavily API key (required for `web_search` tool) |
+| `TAVILY_API_KEY` | `None` | Tavily API key (required for `search_web` tool) |
 | `WEB_SEARCH_TIMEOUT` | `15` | Timeout in seconds for web search requests |
 | `WEB_SEARCH_MAX_SNIPPET_LENGTH` | `4000` | Maximum length of search result snippets |
+
+### Email
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RESEND_API_KEY` | `None` | Resend API key (required for `send_email` tool) |
+| `RESEND_FROM_EMAIL` | `""` | Default sender email (e.g., `"Acme <noreply@acme.com>"`) |
+| `RESEND_TO_EMAIL` | `""` | Override recipient for testing/development |
+| `EMAIL_SEND_TIMEOUT` | `30` | Timeout in seconds for email send requests |
 
 ### CORS
 

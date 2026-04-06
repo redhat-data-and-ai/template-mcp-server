@@ -1,12 +1,13 @@
 """LangGraph MCP Client Example - Template MCP Server Integration.
 
 This example demonstrates how to create a LangGraph agent that connects to the
-template MCP server and uses its available tools for mathematical operations.
+template MCP server and uses its available tools for health calculations,
+web search, and email operations.
 
 The example shows:
 - Setting up a LangGraph ReAct agent with Google's Gemini model
 - Connecting to the template MCP server via HTTP transport
-- Using MCP tools for mathematical calculations
+- Using MCP tools (calculate_bmi, search_web, send_email)
 - Handling tool calls and responses in a conversational context
 
 Prerequisites:
@@ -130,7 +131,7 @@ async def get_agent():
 
     The agent is configured with:
     - Google Generative AI (Gemini 2.0 Flash) as the language model
-    - Tools from the template MCP server (e.g., multiply_numbers)
+    - Tools from the template MCP server (calculate_bmi, search_web, send_email)
     - A system prompt that guides tool usage and response formatting
 
     Note:
@@ -139,13 +140,13 @@ async def get_agent():
     - This example focuses on tool usage which is the recommended approach
 
     Yields:
-        A configured LangGraph agent that can use MCP tools for calculations
-        and other operations provided by the template MCP server.
+        A configured LangGraph agent that can use MCP tools for health calculations,
+        web search, and email operations provided by the template MCP server.
 
     Example:
         async with get_agent() as agent:
             result = await agent.ainvoke({
-                "messages": [{"role": "user", "content": "What is 5 * 3?"}]
+                "messages": [{"role": "user", "content": "Calculate BMI for height 175cm and weight 70kg"}]
             })
     """
     # Test MCP server deployed locally
@@ -176,27 +177,34 @@ async def demonstrate_tool_calls():
     """Demonstrate MCP tool calls using the LangGraph agent.
 
     This function shows how the LangGraph agent can use tools from the template
-    MCP server to perform mathematical operations. It demonstrates:
+    MCP server to perform health calculations and information retrieval. It demonstrates:
 
     1. Tool Selection: How the agent decides which tool to use
     2. Parameter Formatting: How the agent formats tool parameters
     3. Response Processing: How the agent interprets tool responses
     4. Final Answer Generation: How the agent provides user-friendly responses
 
-    The example uses the multiply_numbers tool to perform calculations
-    and shows the complete conversation flow including tool calls.
+    The example uses the calculate_bmi tool and shows the complete
+    conversation flow including tool calls.
     """
     print("\n" + "=" * 60)
     print("🔧 Tool Call Examples")
     print("=" * 60)
 
     async with get_agent() as agent:
-        # Example 1: Mathematical operation
-        print("\n📊 Example 1: Mathematical Operation")
-        print("Question: What is 15 multiplied by 7?")
+        # Example 1: BMI Calculation
+        print("\n📊 Example 1: BMI Calculation")
+        print("Question: Calculate BMI for someone who is 175cm tall and weighs 70kg")
 
         result = await agent.ainvoke(
-            {"messages": [{"role": "user", "content": "What is 15 multiplied by 7?"}]}
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Calculate BMI for height 175cm and weight 70kg",
+                    }
+                ]
+            }
         )
         print(f"Agent Response: {result}")
 
@@ -228,7 +236,9 @@ async def main():
         print("✅ All examples completed successfully!")
         print("=" * 60)
         print("\nThis demonstrates:")
-        print("- 🔧 Tool calls for mathematical operations")
+        print("- 🔧 Tool calls for BMI calculation")
+        print("- 🌐 Web search integration (if TAVILY_API_KEY configured)")
+        print("- 📧 Email capabilities (if RESEND_API_KEY configured)")
 
     except Exception as e:
         print(f"\n❌ Error running examples: {e}")
