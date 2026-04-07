@@ -40,6 +40,7 @@ PUBLIC_PATHS = frozenset(
         "/openapi.json",
         "/auth/authorize",
         "/auth/token",
+        "/auth/revoke",
         "/auth/introspect",
         "/auth/register",
         "/auth/callback",
@@ -288,6 +289,7 @@ async def well_known_oauth_protected_resource():
         "scopes_supported": ["template-mcp-server"],
         "registration_endpoint": f"{host}/auth/register",
         "bearer_methods_supported": ["header"],
+        "revocation_endpoint": f"{host}/auth/revoke",
         "introspection_endpoint": f"{host}/auth/introspect",
         "introspection_endpoint_auth_methods_supported": [
             "client_secret_basic",
@@ -318,6 +320,12 @@ async def well_known_oauth_authorization_server():
             "client_credentials",
         ],
         "token_endpoint_auth_methods_supported": [
+            "client_secret_basic",
+            "client_secret_post",
+            "none",
+        ],
+        "revocation_endpoint": f"{host}/auth/revoke",
+        "revocation_endpoint_auth_methods_supported": [
             "client_secret_basic",
             "client_secret_post",
             "none",
