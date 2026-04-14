@@ -3,19 +3,19 @@ from unittest.mock import Mock, patch
 
 import httpx
 
-from template_mcp_server.src.oauth.handler import SCOPE, OAuth2Handler
+from rfe_mcp_server.src.oauth.handler import SCOPE, OAuth2Handler
 
 
 class TestOAuth2Handler:
     """Test class for OAuth2Handler."""
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
     def test_create_oauth_session_without_state(self, mock_settings):
         """Test creating OAuth session without state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
 
-        with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
+        with patch("rfe_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
             mock_oauth.return_value = mock_session
 
@@ -29,13 +29,13 @@ class TestOAuth2Handler:
             )
             assert result == mock_session
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
     def test_create_oauth_session_with_state(self, mock_settings):
         """Test creating OAuth session with state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
 
-        with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
+        with patch("rfe_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
             mock_oauth.return_value = mock_session
 
@@ -49,7 +49,7 @@ class TestOAuth2Handler:
             )
             assert result == mock_session
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
     def test_get_authorization_url(self, mock_create_session):
         """Test getting authorization URL."""
         mock_session = Mock()
@@ -62,8 +62,8 @@ class TestOAuth2Handler:
         assert auth_url == "http://auth.url"
         assert state == "state123"
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
     def test_get_access_token_from_authorization_code_flow(
         self, mock_create_session, mock_settings
     ):
@@ -88,8 +88,8 @@ class TestOAuth2Handler:
         )
         assert result == mock_token
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
     def test_get_access_token_from_refresh_token(
         self, mock_create_session, mock_settings
     ):
@@ -113,8 +113,8 @@ class TestOAuth2Handler:
         )
         assert result == mock_token
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.httpx.post")
     def test_introspect_token_success(self, mock_post, mock_settings):
         """Test successful token introspection."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -139,8 +139,8 @@ class TestOAuth2Handler:
         )
         assert result == {"active": True, "sub": "user123"}
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.httpx.post")
     def test_introspect_token_http_error(self, mock_post, mock_settings):
         """Test token introspection with HTTP error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -153,8 +153,8 @@ class TestOAuth2Handler:
         assert result["active"] is False
         assert "Introspection failed" in result["error"]
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.httpx.post")
     def test_introspect_token_unexpected_error(self, mock_post, mock_settings):
         """Test token introspection with unexpected error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -167,7 +167,7 @@ class TestOAuth2Handler:
         assert result["active"] is False
         assert "Unexpected error" in result["error"]
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
     def test_verify_access_token_active(self, mock_introspect):
         """Test verifying an active access token."""
         mock_introspect.return_value = {
@@ -183,7 +183,7 @@ class TestOAuth2Handler:
         assert result["active"] is True
         assert result["sub"] == "user123"
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
     def test_verify_access_token_inactive(self, mock_introspect):
         """Test verifying an inactive token."""
         mock_introspect.return_value = {"active": False}
@@ -193,7 +193,7 @@ class TestOAuth2Handler:
         mock_introspect.assert_called_once_with("token123")
         assert result is None
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
     def test_verify_access_token_expired(self, mock_introspect):
         """Test verifying an expired token."""
         mock_introspect.return_value = {
@@ -206,7 +206,7 @@ class TestOAuth2Handler:
 
         assert result is None
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
     def test_verify_access_token_invalid_type(self, mock_introspect):
         """Test verifying token with invalid type."""
         mock_introspect.return_value = {
@@ -219,7 +219,7 @@ class TestOAuth2Handler:
 
         assert result is None
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.introspect_token")
     def test_verify_access_token_no_expiry(self, mock_introspect):
         """Test verifying token without expiry."""
         mock_introspect.return_value = {
@@ -233,7 +233,7 @@ class TestOAuth2Handler:
         assert result["active"] is True
         assert result["sub"] == "user123"
 
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.verify_access_token")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Handler.verify_access_token")
     def test_verify_authorization_header_valid(self, mock_verify):
         """Test verifying valid authorization header."""
         mock_verify.return_value = {"active": True, "sub": "user123"}
@@ -266,9 +266,9 @@ class TestOAuth2Handler:
 class TestOAuth2HandlerIntegration:
     """Integration tests for OAuth2Handler."""
 
-    @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.OAuth2Session")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("rfe_mcp_server.src.oauth.handler.settings")
+    @patch("rfe_mcp_server.src.oauth.handler.OAuth2Session")
+    @patch("rfe_mcp_server.src.oauth.handler.httpx.post")
     def test_full_oauth_flow_simulation(
         self, mock_post, mock_oauth_session, mock_settings
     ):

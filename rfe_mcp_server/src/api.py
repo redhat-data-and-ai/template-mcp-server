@@ -1,4 +1,4 @@
-"""This module sets up the FastAPI application for the Template MCP server.
+"""This module sets up the FastAPI application for the RFE MCP server.
 
 It initializes the FastAPI app, configures CORS middleware, and sets up
 the MCP server with appropriate transport protocols.
@@ -15,16 +15,16 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from template_mcp_server.src.mcp import TemplateMCPServer
-from template_mcp_server.src.oauth.handler import OAuth2Handler
-from template_mcp_server.src.oauth.routes import register_oauth_routes
-from template_mcp_server.src.oauth.service import OAuthService
-from template_mcp_server.src.settings import settings
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.src.mcp import RFEMCPServer
+from rfe_mcp_server.src.oauth.handler import OAuth2Handler
+from rfe_mcp_server.src.oauth.routes import register_oauth_routes
+from rfe_mcp_server.src.oauth.service import OAuthService
+from rfe_mcp_server.src.settings import settings
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
-server = TemplateMCPServer()
+server = RFEMCPServer()
 
 oauth_service_instance: Optional[OAuthService] = None
 
@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Initializing storage service...")
     try:
         if settings.ENABLE_AUTH:
-            from template_mcp_server.src.oauth.service import initialize_storage
+            from rfe_mcp_server.src.oauth.service import initialize_storage
 
             storage_service = await initialize_storage()
             logger.info("Storage service initialized successfully")
@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Cleanup storage service
     logger.info("Shutting down storage service...")
     try:
-        from template_mcp_server.src.oauth.service import cleanup_storage
+        from rfe_mcp_server.src.oauth.service import cleanup_storage
 
         await cleanup_storage()
         oauth_service_instance = None
@@ -186,7 +186,7 @@ class LocalDevelopmentAuthorizationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            from template_mcp_server.src.oauth.handler import OAuth2Handler
+            from rfe_mcp_server.src.oauth.handler import OAuth2Handler
 
             authorization_url, state = OAuth2Handler.get_authorization_url()
 
@@ -261,7 +261,7 @@ async def health_check():
         status_code=200,
         content={
             "status": "healthy",
-            "service": "template-mcp-server",
+            "service": "rfe-mcp-server",
             "transport_protocol": settings.MCP_TRANSPORT_PROTOCOL,
             "version": "0.1.0",
         },

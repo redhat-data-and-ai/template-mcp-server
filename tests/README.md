@@ -25,7 +25,7 @@ pytest
 pytest -v
 
 # With coverage report
-pytest --cov=template_mcp_server --cov-report=html
+pytest --cov=rfe_mcp_server --cov-report=html
 ```
 
 ### **Specific Test Categories:**

@@ -1,5 +1,5 @@
 {
-  "name": "Template MCP Server",
+  "name": "RFE MCP Server",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv pip install -e '.[dev]' && pre-commit install && cp -n .env.example .env 2>/dev/null || true",
   "customizations": {

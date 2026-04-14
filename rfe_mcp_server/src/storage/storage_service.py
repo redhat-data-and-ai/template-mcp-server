@@ -1,4 +1,4 @@
-"""PostgreSQL storage service for the Template MCP Server."""
+"""PostgreSQL storage service for the RFE MCP Server."""
 
 import json
 from datetime import datetime, timezone
@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import asyncpg
 
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 

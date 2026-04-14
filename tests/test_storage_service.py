@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from template_mcp_server.src.storage.storage_service import StorageService
+from rfe_mcp_server.src.storage.storage_service import StorageService
 
 
 class TestStorageServiceInit:
@@ -57,7 +57,7 @@ class TestStorageServiceConnection:
             return mock_pool
 
         with patch(
-            "template_mcp_server.src.storage.storage_service.asyncpg.create_pool",
+            "rfe_mcp_server.src.storage.storage_service.asyncpg.create_pool",
             side_effect=mock_create_pool,
         ) as mock_create:
             with patch.object(
@@ -75,7 +75,7 @@ class TestStorageServiceConnection:
         service = StorageService()
 
         with patch(
-            "template_mcp_server.src.storage.storage_service.asyncpg.create_pool",
+            "rfe_mcp_server.src.storage.storage_service.asyncpg.create_pool",
             side_effect=Exception("Connection failed"),
         ):
             with pytest.raises(ConnectionError, match="PostgreSQL connection failed"):

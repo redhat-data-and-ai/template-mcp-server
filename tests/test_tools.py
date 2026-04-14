@@ -5,9 +5,9 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from template_mcp_server.src.tools.code_review_tool import generate_code_review_prompt
-from template_mcp_server.src.tools.multiply_tool import multiply_numbers
-from template_mcp_server.src.tools.redhat_logo_tool import get_redhat_logo
+from rfe_mcp_server.src.tools.code_review_tool import generate_code_review_prompt
+from rfe_mcp_server.src.tools.multiply_tool import multiply_numbers
+from rfe_mcp_server.src.tools.redhat_logo_tool import get_redhat_logo
 
 
 class TestMultiplyTool:
@@ -131,7 +131,7 @@ class TestMultiplyTool:
         assert "error" in result
         assert "Failed to perform multiplication" in result["message"]
 
-    @patch("template_mcp_server.src.tools.multiply_tool.logger")
+    @patch("rfe_mcp_server.src.tools.multiply_tool.logger")
     def test_multiply_numbers_logging_success(self, mock_logger):
         """Test that successful multiplication is logged."""
         # Arrange
@@ -143,7 +143,7 @@ class TestMultiplyTool:
         # Assert
         mock_logger.info.assert_called_with("Multiply tool called: 5.0 * 3.0 = 15.0")
 
-    @patch("template_mcp_server.src.tools.multiply_tool.logger")
+    @patch("rfe_mcp_server.src.tools.multiply_tool.logger")
     def test_multiply_numbers_logging_error(self, mock_logger):
         """Test that errors are logged."""
         # Arrange
@@ -290,7 +290,7 @@ class TestRedHatLogoTool:
     """Test the Red Hat logo tool functionality."""
 
     @patch("builtins.open", new_callable=mock_open, read_data=b"fake_png_data")
-    @patch("template_mcp_server.src.tools.redhat_logo_tool.Path")
+    @patch("rfe_mcp_server.src.tools.redhat_logo_tool.Path")
     def test_get_redhat_logo_success(self, mock_path, mock_file):
         """Test successful reading of Red Hat logo."""
         # Arrange
@@ -315,7 +315,7 @@ class TestRedHatLogoTool:
         assert len(result["data"]) > 0
         assert result["size_bytes"] == 13  # Length of b"fake_png_data"
 
-    @patch("template_mcp_server.src.tools.redhat_logo_tool.Path")
+    @patch("rfe_mcp_server.src.tools.redhat_logo_tool.Path")
     def test_get_redhat_logo_file_not_found(self, mock_path):
         """Test handling when logo file is not found."""
         # Arrange
@@ -340,7 +340,7 @@ class TestRedHatLogoTool:
         assert result["error"] == "file_not_found"
         assert "Could not find logo file" in result["message"]
 
-    @patch("template_mcp_server.src.tools.redhat_logo_tool.Path")
+    @patch("rfe_mcp_server.src.tools.redhat_logo_tool.Path")
     def test_get_redhat_logo_permission_error(self, mock_path):
         """Test handling when logo file has permission issues."""
         # Arrange

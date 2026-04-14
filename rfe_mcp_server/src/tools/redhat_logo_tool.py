@@ -1,4 +1,4 @@
-"""Red Hat logo tool for the Template MCP Server.
+"""Red Hat logo tool for the RFE MCP Server.
 
 This tool provides functionality to read and serve the Red Hat logo
 as a base64 encoded resource for MCP clients as a tool.
@@ -8,7 +8,7 @@ import base64
 from pathlib import Path
 from typing import Any, Dict
 
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 

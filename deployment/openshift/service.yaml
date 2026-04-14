@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: template-mcp-server
+  name: rfe-mcp-server
   labels:
-    app: template-mcp-server
+    app: rfe-mcp-server
     component: mcp-server
 spec:
   type: ClusterIP
@@ -13,5 +13,5 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: template-mcp-server
+    app: rfe-mcp-server
     component: mcp-server

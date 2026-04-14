@@ -15,8 +15,8 @@ from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError
 
-from template_mcp_server.src.settings import settings
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.src.settings import settings
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 from .handler import OAuth2Handler
 from .models import (
@@ -31,7 +31,7 @@ from .service import OAuthService, verify_code_challenge
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
 if settings.USE_EXTERNAL_BROWSER_AUTH:
-    import template_mcp_server.src.api as api_module
+    import rfe_mcp_server.src.api as api_module
 
 
 async def handle_callback(request: Request, oauth_service: OAuthService) -> Response:

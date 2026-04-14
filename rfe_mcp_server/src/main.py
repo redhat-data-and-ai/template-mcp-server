@@ -1,14 +1,14 @@
-"""Main entry point for the Template MCP Server."""
+"""Main entry point for the RFE MCP Server."""
 
 import sys
 from typing import Any, NoReturn
 
 import uvicorn
 
-from template_mcp_server.src.api import app
-from template_mcp_server.src.settings import settings
-from template_mcp_server.src.settings import validate_config as validate_config_func
-from template_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
+from rfe_mcp_server.src.api import app
+from rfe_mcp_server.src.settings import settings
+from rfe_mcp_server.src.settings import validate_config as validate_config_func
+from rfe_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
 
 # Initialize logger
 logger = get_python_logger()
@@ -80,7 +80,7 @@ def handle_startup_error(error: Exception, context: str = "server startup") -> N
 def main() -> None:
     """Main entry point for the MCP server.
 
-    Initializes logging, loads configuration, and starts the Template MCP server.
+    Initializes logging, loads configuration, and starts the RFE MCP server.
     Handles graceful shutdown on keyboard interrupt and logs any startup errors.
 
     Raises:
@@ -116,7 +116,7 @@ def main() -> None:
     except Exception as e:
         handle_startup_error(e, "server startup")
     finally:
-        logger.info("Template MCP server shutting down")
+        logger.info("RFE MCP server shutting down")
 
 
 def run() -> None:

@@ -1,9 +1,9 @@
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
-  name: template-mcp-server
+  name: rfe-mcp-server
   labels:
-    app: template-mcp-server
+    app: rfe-mcp-server
     component: mcp-server
 spec:
   successfulBuildsHistoryLimit: 1
@@ -11,7 +11,7 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: template-mcp-server:latest
+      name: rfe-mcp-server:latest
   source:
     type: Binary
     binary: {}

@@ -3,10 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["template_mcp_server"]
+packages = ["rfe_mcp_server"]
 
 [project]
-name = "template-mcp-server"
+name = "rfe-mcp-server"
 version = "0.1.0"
 description = "A template for Model Context Protocol (MCP) server development"
 readme = "README.md"
@@ -56,13 +56,13 @@ dev = [
 ]
 
 [project.scripts]
-template-mcp-server = "template_mcp_server.src.main:main"
+rfe-mcp-server = "rfe_mcp_server.src.main:main"
 
 [project.urls]
-Homepage = "https://github.com/redhat-data-and-ai/template-mcp-server"
-Repository = "https://github.com/redhat-data-and-ai/template-mcp-server"
-Issues = "https://github.com/redhat-data-and-ai/template-mcp-server/issues"
-Changelog = "https://github.com/redhat-data-and-ai/template-mcp-server/releases"
+Homepage = "https://github.com/redhat-data-and-ai/rfe-mcp-server"
+Repository = "https://github.com/redhat-data-and-ai/rfe-mcp-server"
+Issues = "https://github.com/redhat-data-and-ai/rfe-mcp-server/issues"
+Changelog = "https://github.com/redhat-data-and-ai/rfe-mcp-server/releases"
 
 [tool.ruff]
 target-version = "py312"
@@ -75,7 +75,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.ruff.lint.isort]
-known-first-party = ["template_mcp_server"]
+known-first-party = ["rfe_mcp_server"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -104,7 +104,7 @@ asyncio_mode = "auto"
 markers = ["asyncio"]
 
 [tool.coverage.run]
-source = ["template_mcp_server"]
+source = ["rfe_mcp_server"]
 omit = [
     "*/tests/*",
     "*/test_*",

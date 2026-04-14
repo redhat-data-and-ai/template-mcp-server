@@ -1,4 +1,4 @@
-"""Settings for the Template MCP Server."""
+"""Settings for the RFE MCP Server."""
 
 from typing import List, Optional
 
@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 # Initialize logger
 logger = get_python_logger()
@@ -20,7 +20,7 @@ except Exception as e:
 
 
 class Settings(BaseSettings):
-    """Configuration settings for the Template MCP Server.
+    """Configuration settings for the RFE MCP Server.
 
     Uses Pydantic BaseSettings to load and validate configuration from environment variables.
     Provides default values for optional settings and validation for required ones.
@@ -205,7 +205,7 @@ class Settings(BaseSettings):
         json_schema_extra={
             "env": "POSTGRES_DB",
             "description": "PostgreSQL database name",
-            "example": "template_mcp_server",
+            "example": "rfe_mcp_server",
         },
     )
     POSTGRES_USER: Optional[str] = Field(

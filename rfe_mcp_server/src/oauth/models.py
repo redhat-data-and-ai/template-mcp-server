@@ -4,7 +4,7 @@ from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from template_mcp_server.src.settings import settings
+from rfe_mcp_server.src.settings import settings
 
 # Pydantic uses ... (Ellipsis) as a sentinel for "required field".
 # When COMPATIBLE_WITH_CURSOR is True, client_id becomes optional (default=None).

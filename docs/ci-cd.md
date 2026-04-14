@@ -51,15 +51,15 @@ uv pip install -e ".[dev]"
 pre-commit run --all-files
 
 # Run tests with coverage
-pytest --cov=template_mcp_server --cov-fail-under=80
+pytest --cov=rfe_mcp_server --cov-fail-under=80
 
 # Run security checks
-bandit -r template_mcp_server/
+bandit -r rfe_mcp_server/
 safety check
 
 # Build and test container
-podman build -t template-mcp-server .
-podman run --rm template-mcp-server python -c "import template_mcp_server; print('OK')"
+podman build -t rfe-mcp-server .
+podman run --rm rfe-mcp-server python -c "import rfe_mcp_server; print('OK')"
 ```
 
 ## Branch Protection

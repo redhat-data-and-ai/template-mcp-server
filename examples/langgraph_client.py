@@ -1,16 +1,16 @@
-"""LangGraph MCP Client Example - Template MCP Server Integration.
+"""LangGraph MCP Client Example - RFE MCP Server Integration.
 
 This example demonstrates how to create a LangGraph agent that connects to the
-template MCP server and uses its available tools for mathematical operations.
+RFE MCP server and uses its available tools for mathematical operations.
 
 The example shows:
 - Setting up a LangGraph ReAct agent with Google's Gemini model
-- Connecting to the template MCP server via HTTP transport
+- Connecting to the RFE MCP server via HTTP transport
 - Using MCP tools for mathematical calculations
 - Handling tool calls and responses in a conversational context
 
 Prerequisites:
-- Template MCP server must be running on http://localhost:5001
+- RFE MCP server must be running on http://localhost:5001
 - Google Generative AI credentials must be configured via
     GEMINI_API_KEY environment variable or
     GOOGLE_APPLICATION_CREDENTIALS environment variable
@@ -125,12 +125,12 @@ system_prompt = f"""
 async def get_agent_redhat():
     """Create and yield a fully initialized LangGraph agent with MCP integration.
 
-    This function sets up a LangGraph ReAct agent that connects to the template
+    This function sets up a LangGraph ReAct agent that connects to the RFE
     MCP server and uses Google's Gemini model for reasoning and tool usage.
 
     The agent is configured with:
     - Google Generative AI (Gemini 2.0 Flash) as the language model
-    - Tools from the template MCP server (e.g., multiply_numbers)
+    - Tools from the RFE MCP server (e.g., multiply_numbers)
     - A system prompt that guides tool usage and response formatting
 
     Note:
@@ -140,7 +140,7 @@ async def get_agent_redhat():
 
     Yields:
         A configured LangGraph agent that can use MCP tools for calculations
-        and other operations provided by the template MCP server.
+        and other operations provided by the RFE MCP server.
 
     Example:
         async with get_agent_redhat() as agent:
@@ -152,7 +152,7 @@ async def get_agent_redhat():
     # Initialize MCP client and get tools
     client = MultiServerMCPClient(
         {
-            "template_mcp_server": {
+            "rfe_mcp_server": {
                 "url": "http://localhost:5001/mcp/",
                 "transport": "streamable_http",
             },
@@ -176,7 +176,7 @@ async def get_agent_redhat():
 async def demonstrate_tool_calls():
     """Demonstrate MCP tool calls using the LangGraph agent.
 
-    This function shows how the LangGraph agent can use tools from the template
+    This function shows how the LangGraph agent can use tools from the RFE
     MCP server to perform mathematical operations. It demonstrates:
 
     1. Tool Selection: How the agent decides which tool to use
@@ -206,7 +206,7 @@ async def main():
     """Run the complete LangGraph MCP client demonstration.
 
     This main function orchestrates all the demonstration examples and provides
-    a comprehensive overview of LangGraph integration with the template MCP server.
+    a comprehensive overview of LangGraph integration with the RFE MCP server.
 
     The demonstration includes:
     - Tool call examples showing mathematical operations
@@ -219,7 +219,7 @@ async def main():
     print("🚀 LangGraph MCP Client Examples")
     print("=" * 60)
     print("This demonstrates various capabilities of the LangGraph agent")
-    print("connected to the template MCP server.")
+    print("connected to the RFE MCP server.")
 
     try:
         # Run all examples
@@ -233,7 +233,7 @@ async def main():
 
     except Exception as e:
         print(f"\n❌ Error running examples: {e}")
-        print("Make sure the template MCP server is running on http://localhost:5001")
+        print("Make sure the RFE MCP server is running on http://localhost:5001")
 
 
 if __name__ == "__main__":

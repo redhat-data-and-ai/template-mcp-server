@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 
-from template_mcp_server.src.api import app, get_host
+from rfe_mcp_server.src.api import app, get_host
 
 
 class TestAPI:
@@ -28,7 +28,7 @@ class TestAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "template-mcp-server"
+        assert data["service"] == "rfe-mcp-server"
         assert "transport_protocol" in data
         assert data["version"] == "0.1.0"
 
@@ -58,7 +58,7 @@ class TestAPI:
         # Assert
         assert response.headers["content-type"] == "application/json"
 
-    @patch("template_mcp_server.src.api.settings")
+    @patch("rfe_mcp_server.src.api.settings")
     def test_health_endpoint_with_different_transport_protocols(self, mock_settings):
         """Test health endpoint with different transport protocols."""
         # Arrange
@@ -128,20 +128,20 @@ class TestAPI:
     def test_app_imports(self):
         """Test that all required modules are imported."""
         # This test ensures that the API module can be imported without errors
-        import template_mcp_server.src.api
+        import rfe_mcp_server.src.api
 
-        assert template_mcp_server.src.api.app is not None
+        assert rfe_mcp_server.src.api.app is not None
 
     def test_server_initialization(self):
         """Test that the server is properly initialized."""
         # Arrange & Act
-        from template_mcp_server.src.api import server
+        from rfe_mcp_server.src.api import server
 
         # Assert
         assert server is not None
         assert hasattr(server, "mcp")
 
-    @patch("template_mcp_server.src.api.settings")
+    @patch("rfe_mcp_server.src.api.settings")
     def test_transport_protocol_configuration(self, mock_settings):
         """Test that different transport protocols are handled correctly."""
         # Test SSE protocol
@@ -150,7 +150,7 @@ class TestAPI:
         # Re-import to test SSE configuration
         import importlib
 
-        import template_mcp_server.src.api as api_module
+        import rfe_mcp_server.src.api as api_module
 
         importlib.reload(api_module)
 
@@ -169,21 +169,21 @@ class TestAPI:
 class TestGetHost:
     """Test the get_host helper function."""
 
-    @patch("template_mcp_server.src.api.settings")
+    @patch("rfe_mcp_server.src.api.settings")
     def test_get_host_default(self, mock_settings):
         """Test get_host returns default when MCP_HOST_ENDPOINT is not set."""
         mock_settings.MCP_HOST_ENDPOINT = None
         result = get_host()
         assert result == "http://localhost:5001"
 
-    @patch("template_mcp_server.src.api.settings")
+    @patch("rfe_mcp_server.src.api.settings")
     def test_get_host_with_valid_endpoint(self, mock_settings):
         """Test get_host returns the configured endpoint."""
         mock_settings.MCP_HOST_ENDPOINT = "https://my-server.example.com"
         result = get_host()
         assert result == "https://my-server.example.com"
 
-    @patch("template_mcp_server.src.api.settings")
+    @patch("rfe_mcp_server.src.api.settings")
     def test_get_host_with_invalid_endpoint_falls_back(self, mock_settings):
         """Test get_host falls back to default on invalid endpoint."""
         mock_settings.MCP_HOST_ENDPOINT = "not-a-url"
@@ -212,11 +212,11 @@ class TestRegisterEndpointRoute:
 
         with (
             patch(
-                "template_mcp_server.src.oauth.routes.get_oauth_service",
+                "rfe_mcp_server.src.oauth.routes.get_oauth_service",
                 return_value=mock_oauth_service,
             ),
             patch(
-                "template_mcp_server.src.oauth.controller.handle_register",
+                "rfe_mcp_server.src.oauth.controller.handle_register",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ),

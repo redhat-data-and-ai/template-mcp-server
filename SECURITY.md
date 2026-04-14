@@ -12,7 +12,7 @@
 
 Instead, report them via one of the following methods:
 
-1. **GitHub Security Advisories**: Use the [Report a vulnerability](https://github.com/redhat-data-and-ai/template-mcp-server/security/advisories/new) button on the Security tab.
+1. **GitHub Security Advisories**: Use the [Report a vulnerability](https://github.com/redhat-data-and-ai/rfe-mcp-server/security/advisories/new) button on the Security tab.
 2. **Email**: Send details to the repository maintainers listed in [CODEOWNERS](CODEOWNERS).
 
 ### What to Include

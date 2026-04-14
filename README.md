@@ -1,32 +1,60 @@
-# Template MCP Server
+# RFE MCP Server
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12,3.13-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://github.com/redhat-data-and-ai/template-mcp-server/actions/workflows/test.yml/badge.svg)](https://github.com/redhat-data-and-ai/template-mcp-server/actions/workflows/test.yml)
-[![Coverage](https://codecov.io/gh/redhat-data-and-ai/template-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/redhat-data-and-ai/template-mcp-server)
+<!-- [![Tests](https://github.com/redhat-data-and-ai/rfe-mcp-server/actions/workflows/test.yml/badge.svg)](https://github.com/redhat-data-and-ai/rfe-mcp-server/actions/workflows/test.yml) -->
+<!-- [![Coverage](https://codecov.io/gh/redhat-data-and-ai/rfe-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/redhat-data-and-ai/rfe-mcp-server) -->
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/redhat-data-and-ai/template-mcp-server)
 
-A production-ready template for developing Model Context Protocol (MCP) servers using Python and FastMCP. This server provides a foundation for creating MCP-compliant servers with comprehensive examples of tools, structured logging, configuration management, and containerized deployment.
+A unified RFE (Request for Enhancement) aggregation and query service for the RHEL ecosystem, built as a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server. It integrates data from internal issue tracking systems (e.g., Jira) with customer and asset context, enabling Sales and Support teams to retrieve and analyse customer-specific or system-relevant RFEs efficiently.
 
-The template includes three example MCP tools: a multiply calculator, a code review prompt generator, and a Red Hat logo tool. It demonstrates best practices for MCP server development including proper error handling, health checks, multiple transport protocols (HTTP, SSE, streamable-HTTP), SSL support, and comprehensive development tooling.
+This project is built on top of the [Template MCP Server](https://github.com/redhat-data-and-ai/template-mcp-server), a production-ready Python/FastMCP starter maintained by Red Hat Data & AI.
+
+## Goal
+
+Establish a centralized service that:
+
+- **Aggregates RFE data** from internal issue tracking systems and associates it with customer/account and asset context.
+- **Exposes MCP tools** for querying RFEs by customer/account, by system/asset relevance, and for retrieving RFE status and metadata.
+- **Improves customer communication** by giving Sales and Support teams fast, structured access to RFE information (open, planned, implemented, etc.).
+- **Lays the foundation** for future end-user self-service, where customers can directly track the status and progress of their submitted RFEs.
+
+## MCP Tools
+
+| Tool | Description |
+| ---- | ----------- |
+| Query RFEs by customer/account | Retrieve all RFEs associated with a given customer or account |
+| Query RFEs by system/asset relevance | Find RFEs relevant to specific systems or assets |
+| Retrieve RFE status & metadata | Get structured status (open, planned, implemented) and details for individual RFEs |
+
+Retrieved data is structured, consistent, and suitable for consumption by downstream tools (e.g., LLMs, internal tooling).
 
 ## Features
 
 - **FastMCP + FastAPI** with multiple transport protocols (HTTP, SSE, streamable-HTTP)
-- **Three example tools**: multiply calculator, code review prompt, Red Hat logo
 - **Pydantic configuration** via environment variables
 - **Structured JSON logging** with structlog
 - **SSL/TLS support** for secure deployments
+- **OAuth2 integration** with PostgreSQL token storage and RBAC-ready access control
 - **Container-ready** with Red Hat UBI base image
 - **OpenShift deployment** manifests included
 - **Full CI/CD** with GitHub Actions (tests, linting, security, releases)
-- **OAuth integration** with PostgreSQL token storage
+- **Extensible design** for additional data sources (inventory, product metadata) and future self-service access
+
+## Dependencies
+
+| Dependency | Purpose |
+| ---------- | ------- |
+| Internal issue tracking APIs (e.g., Jira) | Source of RFE data |
+| Customer/account data services | Map RFEs to organizations |
+| Inventory/asset data services (optional) | Relevance-based querying |
+| OAuth2 / RBAC | Authentication and authorization |
+| PostgreSQL | Token and session storage |
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/redhat-data-and-ai/template-mcp-server
-cd template-mcp-server
+git clone https://github.com/redhat-data-and-ai/rfe-mcp-server
+cd rfe-mcp-server
 make install        # creates venv, installs deps + pre-commit hooks
 make local          # starts server on localhost:5001
 ```
@@ -41,112 +69,70 @@ curl http://localhost:5001/health
 <summary>Manual setup (without Make)</summary>
 
 ```bash
-# Create venv and install
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 pre-commit install
 
-# Configure and run
 cp .env.example .env
-template-mcp-server
+rfe-mcp-server
 
-# Verify
 curl http://localhost:5001/health
 ```
 
 </details>
 
-## How to Use This Template
-
-### Option 1: GitHub Template (Recommended)
-
-1. Click the **"Use this template"** button at the top of the repository page.
-2. Name your new repository (e.g., `my-mcp-server`).
-3. Clone your new repository and follow the [rename checklist](#rename-checklist) below.
-
-### Option 2: Manual Clone
-
-```bash
-git clone https://github.com/redhat-data-and-ai/template-mcp-server.git my-mcp-server
-cd my-mcp-server
-rm -rf .git
-git init
-```
-
-### Rename Checklist
-
-After creating your project, replace all references to `template-mcp-server` and `template_mcp_server` with your project name. The following files require updates:
-
-| File / Directory          | What to Change                                                                                                                |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `template_mcp_server/`  | Rename the package directory (e.g.,`my_mcp_server/`)                                                                        |
-| `pyproject.toml`        | `name`, `project.scripts` entry, `[project.urls]`, `[tool.coverage.run] source`                                       |
-| `Makefile`              | References in `lint`, `local`, and deployment targets                                                                     |
-| `Containerfile`         | `COPY` source path and `CMD` module path                                                                                  |
-| `compose.yaml`          | `container_name`, service name, healthcheck URL                                                                             |
-| `deployment/openshift/` | App labels, image names, route hostnames in all manifests (`deployment.yaml`, `route.yaml`, `kustomization.yaml`, etc.) |
-| `.github/workflows/`    | Workflow names and paths                                                                                                      |
-| `README.md`             | Title, description, clone URL, and all badge URLs (tests, coverage, Codespaces)                                               |
-| `.env.example`          | Adjust defaults if your server uses a different port or protocol                                                              |
-
-### Verify Rename
-
-Run this to catch any leftover references:
-
-```bash
-grep -rn "template.mcp" --include="*.py" --include="*.yaml" --include="*.yml" --include="*.toml" --include="*.md" .
-```
-
-The output should be empty (or only match this README section itself).
-
 ## Configuration
 
-| Variable                      | Default       | Description                                                          |
-| ----------------------------- | ------------- | -------------------------------------------------------------------- |
-| `MCP_HOST`                  | `localhost` | Server bind address                                                  |
-| `MCP_PORT`                  | `5001`      | Server port (1024-65535)                                             |
-| `MCP_TRANSPORT_PROTOCOL`    | `http`      | Transport protocol (`http`, `sse`, `streamable-http`)          |
-| `MCP_SSL_KEYFILE`           | `None`      | SSL private key file path                                            |
-| `MCP_SSL_CERTFILE`          | `None`      | SSL certificate file path                                            |
-| `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
-| `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
-| `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `MCP_HOST` | `localhost` | Server bind address |
+| `MCP_PORT` | `5001` | Server port (1024-65535) |
+| `MCP_TRANSPORT_PROTOCOL` | `http` | Transport protocol (`http`, `sse`, `streamable-http`) |
+| `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
+| `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |
+| `ENABLE_AUTH` | `False`* | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
+| `USE_EXTERNAL_BROWSER_AUTH` | `False` | Browser-based OAuth for local dev |
+| `PYTHON_LOG_LEVEL` | `INFO` | Logging level |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
 
+## Development
+
+| Command | Description |
+| ------- | ----------- |
+| `make install` | Create venv, install deps, set up pre-commit |
+| `make local` | Start server on localhost:5001 |
+| `make test` | Run test suite (pytest) |
+| `make coverage` | Tests with coverage report (80% minimum) |
+| `make lint` | Ruff linter + mypy type checker |
+| `make format` | Auto-fix lint issues + format code |
+| `make pre-commit` | Run all pre-commit hooks |
+| `make container` | Build and run with podman compose |
+| `make clean` | Remove caches, venv, build artifacts |
+
+## Access Control
+
+The system design supports two tiers of access:
+
+- **Internal users** (Sales, Support) can access cross-customer RFE data where permitted.
+- **External users** (future) are restricted to their own RFE data or publicly visible RFEs.
+
+See [Authentication](docs/authentication.md) for OAuth setup and configuration.
+
 ## Documentation
 
-| Guide                                 | Description                                                |
-| ------------------------------------- | ---------------------------------------------------------- |
-| [Architecture](docs/architecture.md)     | System diagrams, code structure, key components, MCP tools |
-| [Development](docs/development.md)       | Setup, running locally, testing, code quality              |
-| [Deployment](docs/deployment.md)         | Podman, OpenShift, container configuration                 |
-| [CI/CD](docs/ci-cd.md)                   | Workflows, pipeline features, running CI locally           |
-| [Contributing](CONTRIBUTING.md)          | Development workflow, commit conventions, PR process       |
-| [Security](SECURITY.md)                  | Vulnerability reporting policy                             |
-| [Changelog](CHANGELOG.md)                | Release history                                            |
-| [Authentication](docs/authentication.md) | OAuth setup, auth modes, troubleshooting                   |
-| [Tutorial](docs/tutorial.md)             | Your First Tool in 5 Minutes                               |
-| [Examples](examples/)                    | FastMCP and LangGraph client examples                      |
+| Guide | Description |
+| ----- | ----------- |
+| [Architecture](docs/architecture.md) | System diagrams, code structure, key components |
+| [Development](docs/development.md) | Setup, running locally, testing, code quality |
+| [Deployment](docs/deployment.md) | Podman, OpenShift, container configuration |
+| [CI/CD](docs/ci-cd.md) | Workflows, pipeline features, running CI locally |
+| [Authentication](docs/authentication.md) | OAuth setup, auth modes, troubleshooting |
+| [Contributing](CONTRIBUTING.md) | Development workflow, commit conventions, PR process |
+| [Security](SECURITY.md) | Vulnerability reporting policy |
+| [Changelog](CHANGELOG.md) | Release history |
+| [Examples](examples/) | FastMCP and LangGraph client examples |
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-```bash
-# Fork, clone, and set up
-git clone https://github.com/<your-username>/template-mcp-server.git
-cd template-mcp-server
-make install
-
-# Create a branch, make changes, verify
-git checkout -b feat/your-feature
-make lint && make test && make pre-commit
-
-# Commit and open a PR
-git commit -m "feat: your descriptive message"
-git push origin feat/your-feature
-```
 
 ## License
 
