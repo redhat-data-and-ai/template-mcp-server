@@ -152,7 +152,7 @@ async def send_email(email_id: str, subject: str, body: str) -> str:
     )
 
     # Run the synchronous email send in an executor to avoid blocking
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None, invoke_email_agent, email_id, subject, body
     )
