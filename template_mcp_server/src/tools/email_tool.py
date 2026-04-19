@@ -5,6 +5,7 @@ supporting HTML email content.
 """
 
 import asyncio
+import threading
 
 from template_mcp_server.src.settings import settings
 from template_mcp_server.utils.pylogger import get_python_logger
@@ -17,6 +18,9 @@ except ImportError:
 logger = get_python_logger()
 
 RETRY_DELAYS_SECONDS = (1, 2)
+
+# Lock to prevent race conditions in multi-tenant setups when setting api_key
+_resend_lock = threading.Lock()
 
 
 def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
@@ -61,9 +65,6 @@ def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
             )
             return f"Error sending email: {error_msg}"
 
-        # Set API key
-        resend.api_key = api_key
-
         # Get recipient email from settings or use provided email_id
         to_email = settings.RESEND_TO_EMAIL or email_id
         from_email = settings.RESEND_FROM_EMAIL or "Acme <onboarding@resend.dev>"
@@ -88,8 +89,10 @@ def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
             },
         )
 
-        # Send the email
-        response = resend.Emails.send(params)
+        # Thread-safe: use lock to prevent race conditions in multi-tenant setups
+        with _resend_lock:
+            resend.api_key = api_key
+            response = resend.Emails.send(params)
 
         logger.info(
             "Email sent successfully",
