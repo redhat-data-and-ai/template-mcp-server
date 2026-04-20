@@ -11,6 +11,7 @@ from template_mcp_server.src.tools.bmi_tool import calculate_bmi
 from template_mcp_server.src.tools.email_tool import (
     send_email,
 )
+from template_mcp_server.src.tools.validate_email_tool import validate_email
 from template_mcp_server.src.tools.web_search_tool import search_web
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
@@ -53,8 +54,10 @@ class TemplateMCPServer:
         - calculate_bmi: BMI calculator
         - search_web: Web search using Tavily API for current information
         - send_email: Email operations
+        - validate_email: Email format validation
         """
         # Register all the imported tools
         self.mcp.tool()(calculate_bmi)
         self.mcp.tool()(search_web)
         self.mcp.tool()(send_email)
+        self.mcp.tool()(validate_email)
