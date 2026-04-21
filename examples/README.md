@@ -58,19 +58,25 @@ server_url = "http://localhost:5001"           # Local development
 - ✅ Complex business logic
 - ✅ Production-ready patterns
 
-## 🎯 **Customization for Your Domain**
+## 🎯 **Available Tools**
 
-**Update the examples with your tools:**
+The template includes three example tools:
 
 ```python
-# Replace template tool calls with your domain tools
-# Instead of:
-result = await client.call_tool("multiply_numbers", {"a": 5, "b": 3})
+# BMI Calculator
+await client.call_tool("calculate_bmi", {"height": "175", "weight": "70"})
 
-# Use your domain tools:
-result = await client.call_tool("execute_domain_query", {
-    "query_type": "performance_analysis",
-    "parameters": {"quarter": "Q3", "region": "EMEA"}
+# Web Search (requires TAVILY_API_KEY)
+await client.call_tool("search_web", {
+    "queries": ["Python async patterns"],
+    "max_results": 5
+})
+
+# Send Email (requires RESEND_API_KEY)
+await client.call_tool("send_email", {
+    "email_id": "user@example.com",
+    "subject": "Test",
+    "body": "<p>Hello!</p>"
 })
 ```
 

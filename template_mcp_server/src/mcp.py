@@ -7,17 +7,12 @@ tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 from fastmcp import FastMCP
 
 from template_mcp_server.src.settings import settings
-
-# Import tools from the tools package
-from template_mcp_server.src.tools.code_review_tool import (
-    generate_code_review_prompt,
+from template_mcp_server.src.tools.bmi_tool import calculate_bmi
+from template_mcp_server.src.tools.email_tool import (
+    send_email,
 )
-from template_mcp_server.src.tools.multiply_tool import (
-    multiply_numbers,
-)
-from template_mcp_server.src.tools.redhat_logo_tool import (
-    get_redhat_logo,
-)
+from template_mcp_server.src.tools.validate_email_tool import validate_email
+from template_mcp_server.src.tools.web_search_tool import search_web
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -56,11 +51,13 @@ class TemplateMCPServer:
         Registers all available tools with the FastMCP server instance.
         In tools-first architecture, the server only provides tools.
         Currently includes:
-        - multiply_numbers: Basic arithmetic operations
-        - generate_code_review_prompt: Code review prompt generation
-        - get_redhat_logo: Red Hat logo retrieval as base64
+        - calculate_bmi: BMI calculator
+        - search_web: Web search using Tavily API for current information
+        - send_email: Email operations
+        - validate_email: Email format validation
         """
         # Register all the imported tools
-        self.mcp.tool()(multiply_numbers)
-        self.mcp.tool()(generate_code_review_prompt)
-        self.mcp.tool()(get_redhat_logo)
+        self.mcp.tool()(calculate_bmi)
+        self.mcp.tool()(search_web)
+        self.mcp.tool()(send_email)
+        self.mcp.tool()(validate_email)

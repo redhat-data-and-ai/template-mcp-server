@@ -278,6 +278,72 @@ class Settings(BaseSettings):
         },
     )
 
+    # Web Search (Tavily) Configuration
+    TAVILY_API_KEY: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "TAVILY_API_KEY",
+            "description": "API key for the Tavily web search service",
+            "sensitive": True,
+        },
+    )
+    WEB_SEARCH_TIMEOUT: float = Field(
+        default=15.0,
+        ge=1.0,
+        le=120.0,
+        json_schema_extra={
+            "env": "WEB_SEARCH_TIMEOUT",
+            "description": "Timeout in seconds for each web search request",
+            "example": 15.0,
+        },
+    )
+    WEB_SEARCH_MAX_SNIPPET_LENGTH: int = Field(
+        default=4000,
+        ge=100,
+        le=50000,
+        json_schema_extra={
+            "env": "WEB_SEARCH_MAX_SNIPPET_LENGTH",
+            "description": "Maximum character length for search result snippets",
+            "example": 4000,
+        },
+    )
+
+    # Email (Resend) Configuration
+    RESEND_API_KEY: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "RESEND_API_KEY",
+            "description": "API key for the Resend email service",
+            "sensitive": True,
+        },
+    )
+    RESEND_FROM_EMAIL: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "RESEND_FROM_EMAIL",
+            "description": "Default from email address for sending emails",
+            "example": "Acme <onboarding@resend.dev>",
+        },
+    )
+    RESEND_TO_EMAIL: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "RESEND_TO_EMAIL",
+            "description": "Override recipient email address (for testing/development)",
+            "example": "test@example.com",
+        },
+    )
+    EMAIL_SEND_TIMEOUT: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=120.0,
+        json_schema_extra={
+            "env": "EMAIL_SEND_TIMEOUT",
+            "description": "Timeout in seconds for each email send request",
+            "example": 30.0,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
