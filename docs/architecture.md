@@ -15,7 +15,7 @@ graph TB
         E[SSL Termination]
     end
 
-    subgraph "Template MCP Server"
+    subgraph "RFE MCP Server"
         subgraph "Application Layer"
             F[FastAPI Application<br/>api.py]
             G[Health Check Endpoint<br/>/health]
@@ -23,7 +23,7 @@ graph TB
         end
 
         subgraph "MCP Core"
-            I[TemplateMCPServer<br/>mcp.py]
+            I[RFEMCPServer<br/>mcp.py]
             J[FastMCP Instance<br/>Protocol Implementation]
             K[Tool Registry<br/>Dynamic Registration]
         end
@@ -175,8 +175,8 @@ flowchart TD
 ## Code Structure
 
 ```
-template-mcp-server/
-├── template_mcp_server/           # Main package directory
+rfe-mcp-server/
+├── rfe_mcp_server/           # Main package directory
 │   ├── __init__.py
 │   ├── src/                       # Core source code
 │   │   ├── __init__.py

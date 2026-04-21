@@ -1,24 +1,24 @@
-"""Template MCP Server implementation.
+"""RFE MCP Server implementation.
 
-This module contains the main Template MCP Server class that provides
+This module contains the main RFE MCP Server class that provides
 tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 """
 
 from fastmcp import FastMCP
 
-from template_mcp_server.src.settings import settings
+from rfe_mcp_server.src.settings import settings
 
 # Import tools from the tools package
-from template_mcp_server.src.tools.code_review_tool import (
+from rfe_mcp_server.src.tools.code_review_tool import (
     generate_code_review_prompt,
 )
-from template_mcp_server.src.tools.multiply_tool import (
+from rfe_mcp_server.src.tools.multiply_tool import (
     multiply_numbers,
 )
-from template_mcp_server.src.tools.redhat_logo_tool import (
+from rfe_mcp_server.src.tools.redhat_logo_tool import (
     get_redhat_logo,
 )
-from template_mcp_server.utils.pylogger import (
+from rfe_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
 )
@@ -26,32 +26,32 @@ from template_mcp_server.utils.pylogger import (
 logger = get_python_logger()
 
 
-class TemplateMCPServer:
-    """Main Template MCP Server implementation following tools-first architecture.
+class RFEMCPServer:
+    """Main RFE MCP Server implementation following tools-first architecture.
 
     This server provides only tools, not resources or prompts, adhering to
     the tools-first architectural pattern for MCP servers.
     """
 
     def __init__(self):
-        """Initialize the MCP server with template tools following tools-first architecture."""
+        """Initialize the MCP server with RFE tools following tools-first architecture."""
         try:
             # Initialize FastMCP server
-            self.mcp = FastMCP("template")
+            self.mcp = FastMCP("rfe")
 
             # Force reconfigure all loggers after FastMCP initialization to ensure structured logging
             force_reconfigure_all_loggers(settings.PYTHON_LOG_LEVEL)
 
             self._register_mcp_tools()
 
-            logger.info("Template MCP Server initialized successfully")
+            logger.info("RFE MCP Server initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Template MCP Server: {e}")
+            logger.error(f"Failed to initialize RFE MCP Server: {e}")
             raise
 
     def _register_mcp_tools(self) -> None:
-        """Register MCP tools for template operations (tools-first architecture).
+        """Register MCP tools for RFE operations (tools-first architecture).
 
         Registers all available tools with the FastMCP server instance.
         In tools-first architecture, the server only provides tools.

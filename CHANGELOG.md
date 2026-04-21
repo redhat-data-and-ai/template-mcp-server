@@ -2,13 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-This project uses [GitHub Releases](https://github.com/redhat-data-and-ai/template-mcp-server/releases) for detailed changelogs. Release notes are auto-generated from merged pull request titles and labels.
+This project uses [GitHub Releases](https://github.com/redhat-data-and-ai/rfe-mcp-server/releases) for detailed changelogs. Release notes are auto-generated from merged pull request titles and labels.
 
 ## [0.1.0] - 2026-02-09
 
 ### Added
 
-- Initial release of Template MCP Server.
+- Initial release of RFE MCP Server.
 - MCP server implementation with FastMCP and FastAPI.
 - Example tools: multiply numbers, code review prompt generator, Red Hat logo resource.
 - OAuth integration with PostgreSQL-backed token storage.

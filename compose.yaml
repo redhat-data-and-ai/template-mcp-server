@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: template-mcp-postgres
+    container_name: rfe-mcp-postgres
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -18,13 +18,13 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - template-network
+      - rfe-network
 
-  template-mcp-server:
+  rfe-mcp-server:
     build:
       context: .
       dockerfile: Containerfile
-    container_name: template-mcp-server
+    container_name: rfe-mcp-server
     ports:
       - "5001:5001"
     env_file:
@@ -47,12 +47,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - template-network
+      - rfe-network
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  template-network:
+  rfe-network:
     driver: bridge

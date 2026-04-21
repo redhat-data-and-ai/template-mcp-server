@@ -56,7 +56,7 @@ Add your tool to `../mcp.py`:
 
 ```python
 # Import your tool
-from template_mcp_server.src.tools.your_tool import your_tool_function
+from rfe_mcp_server.src.tools.your_tool import your_tool_function
 
 # Register in _register_mcp_tools()
 self.mcp.tool()(your_tool_function)
@@ -73,7 +73,7 @@ self.mcp.tool()(your_tool_function)
 1. **Consistent Returns**: Always return `Dict[str, Any]` with `status` field
 2. **Error Handling**: Wrap in try/catch, return structured errors
 3. **Input Validation**: Validate all inputs before processing
-4. **Logging**: Use `from template_mcp_server.utils.pylogger import get_python_logger`
+4. **Logging**: Use `from rfe_mcp_server.utils.pylogger import get_python_logger`
 5. **Testing**: Add tests to `../../tests/test_tools.py`
 
 ## 🎯 **Agent-Friendly Tips**

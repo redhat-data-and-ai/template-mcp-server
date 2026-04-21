@@ -1,4 +1,4 @@
-"""Code review tool for the Template MCP Server.
+"""Code review tool for the RFE MCP Server.
 
 This tool provides functionality to generate code review prompts
 for various programming languages as an MCP tool.
@@ -6,7 +6,7 @@ for various programming languages as an MCP tool.
 
 from typing import Any, Dict
 
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 

@@ -1,4 +1,4 @@
-"""Structured logger utility for the Template MCP server."""
+"""Structured logger utility for the RFE MCP server."""
 
 import logging
 import sys

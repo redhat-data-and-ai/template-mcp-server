@@ -10,6 +10,6 @@ resources:
   - route.yaml
 labels:
   - pairs:
-      app: template-mcp-server
+      app: rfe-mcp-server
       component: mcp-server
     includeSelectors: true

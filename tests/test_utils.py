@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from template_mcp_server.utils.pylogger import (
+from rfe_mcp_server.utils.pylogger import (
     AWS_LOGGERS,
     ERROR_ONLY_LOGGERS,
     HTTP_CLIENT_LOGGERS,
@@ -83,29 +83,29 @@ class TestPylogger:
             assert hasattr(logger, "debug")
             assert hasattr(logger, "critical")
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
-    @patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False)
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False)
     def test_get_python_logger_structlog_configuration(self, mock_structlog):
         """Test that structlog is configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
         mock_structlog.configure.assert_called_once()
         mock_structlog.get_logger.assert_called_once()
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_get_python_logger_processors_configuration(self, mock_structlog):
         """Test that structlog processors are configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
@@ -118,14 +118,14 @@ class TestPylogger:
         assert isinstance(processors, list)
         assert len(processors) > 0
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_get_python_logger_context_class_configuration(self, mock_structlog):
         """Test that context_class is configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
@@ -133,14 +133,14 @@ class TestPylogger:
         call_args = mock_structlog.configure.call_args
         assert call_args[1]["context_class"] is dict
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_get_python_logger_logger_factory_configuration(self, mock_structlog):
         """Test that logger_factory is configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
@@ -151,14 +151,14 @@ class TestPylogger:
         # The actual value might be a mock, so we just verify it's configured
         assert call_args[1]["logger_factory"] is not None
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_get_python_logger_wrapper_class_configuration(self, mock_structlog):
         """Test that wrapper_class is configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
@@ -166,14 +166,14 @@ class TestPylogger:
         call_args = mock_structlog.configure.call_args
         assert call_args[1]["wrapper_class"] == mock_structlog.stdlib.BoundLogger
 
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_get_python_logger_cache_logger_configuration(self, mock_structlog):
         """Test that cache_logger_on_first_use is configured correctly."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
 
         # Act
-        with patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
+        with patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", False):
             get_python_logger()
 
         # Assert
@@ -246,14 +246,14 @@ class TestPylogger:
         """Test that the module can be imported without errors."""
         # Act & Assert
         try:
-            import template_mcp_server.utils.pylogger
+            import rfe_mcp_server.utils.pylogger
 
-            assert template_mcp_server.utils.pylogger.get_python_logger is not None
+            assert rfe_mcp_server.utils.pylogger.get_python_logger is not None
         except ImportError as e:
             pytest.fail(f"Module should be importable: {e}")
 
     # Tests for force_reconfigure_all_loggers()
-    @patch("template_mcp_server.utils.pylogger.get_python_logger")
+    @patch("rfe_mcp_server.utils.pylogger.get_python_logger")
     def test_force_reconfigure_all_loggers_default_level(self, mock_get_logger):
         """Test force_reconfigure_all_loggers with default log level."""
         # Arrange
@@ -265,7 +265,7 @@ class TestPylogger:
         # Assert
         mock_get_logger.assert_called_once_with("INFO")
 
-    @patch("template_mcp_server.utils.pylogger.get_python_logger")
+    @patch("rfe_mcp_server.utils.pylogger.get_python_logger")
     def test_force_reconfigure_all_loggers_custom_level(self, mock_get_logger):
         """Test force_reconfigure_all_loggers with custom log level."""
         # Arrange
@@ -278,15 +278,15 @@ class TestPylogger:
         # Assert
         mock_get_logger.assert_called_once_with(custom_level)
 
-    @patch("template_mcp_server.utils.pylogger._LOGGING_CONFIGURED", True)
-    @patch("template_mcp_server.utils.pylogger.get_python_logger")
+    @patch("rfe_mcp_server.utils.pylogger._LOGGING_CONFIGURED", True)
+    @patch("rfe_mcp_server.utils.pylogger.get_python_logger")
     def test_force_reconfigure_resets_global_flag(self, mock_get_logger):
         """Test that force_reconfigure_all_loggers resets the global configuration flag."""
         # Arrange
         mock_get_logger.return_value = Mock()
 
         # Verify initial state
-        import template_mcp_server.utils.pylogger as pylogger_module
+        import rfe_mcp_server.utils.pylogger as pylogger_module
 
         pylogger_module._LOGGING_CONFIGURED = True
 
@@ -479,8 +479,8 @@ class TestPylogger:
         mock_handlers.clear.assert_called_once()
         mock_filters.clear.assert_called_once()
 
-    @patch("template_mcp_server.utils.pylogger.logging")
-    @patch("template_mcp_server.utils.pylogger._clear_handlers")
+    @patch("rfe_mcp_server.utils.pylogger.logging")
+    @patch("rfe_mcp_server.utils.pylogger._clear_handlers")
     def test_setup_logger_regular_logger(self, mock_clear_handlers, mock_logging):
         """Test _setup_logger for regular loggers (not in ERROR_ONLY_LOGGERS)."""
         # Arrange
@@ -498,8 +498,8 @@ class TestPylogger:
         mock_logger.setLevel.assert_called_once_with(log_level)
         assert mock_logger.propagate is True
 
-    @patch("template_mcp_server.utils.pylogger.logging")
-    @patch("template_mcp_server.utils.pylogger._clear_handlers")
+    @patch("rfe_mcp_server.utils.pylogger.logging")
+    @patch("rfe_mcp_server.utils.pylogger._clear_handlers")
     def test_setup_logger_error_only_logger(self, mock_clear_handlers, mock_logging):
         """Test _setup_logger for loggers in ERROR_ONLY_LOGGERS."""
         # Arrange
@@ -519,8 +519,8 @@ class TestPylogger:
         mock_logger.setLevel.assert_called_once_with(mock_logging.ERROR)
         assert mock_logger.propagate is True
 
-    @patch("template_mcp_server.utils.pylogger.logging")
-    @patch("template_mcp_server.utils.pylogger._setup_logger")
+    @patch("rfe_mcp_server.utils.pylogger.logging")
+    @patch("rfe_mcp_server.utils.pylogger._setup_logger")
     def test_configure_third_party_loggers(self, mock_setup_logger, mock_logging):
         """Test _configure_third_party_loggers function."""
         # Arrange
@@ -545,12 +545,12 @@ class TestPylogger:
         assert configured_loggers == THIRD_PARTY_LOGGERS
 
     # Tests for global state management
-    @patch("template_mcp_server.utils.pylogger.structlog")
+    @patch("rfe_mcp_server.utils.pylogger.structlog")
     def test_logging_configured_flag_prevents_reconfiguration(self, mock_structlog):
         """Test that _LOGGING_CONFIGURED flag prevents reconfiguration."""
         # Arrange
         mock_structlog.get_logger.return_value = Mock()
-        import template_mcp_server.utils.pylogger as pylogger_module
+        import rfe_mcp_server.utils.pylogger as pylogger_module
 
         # First call should configure
         pylogger_module._LOGGING_CONFIGURED = False
@@ -568,7 +568,7 @@ class TestPylogger:
     def test_global_state_management_with_force_reconfigure(self):
         """Test that force_reconfigure properly manages global state."""
         # Arrange
-        import template_mcp_server.utils.pylogger as pylogger_module
+        import rfe_mcp_server.utils.pylogger as pylogger_module
 
         # Set initial state
         pylogger_module._LOGGING_CONFIGURED = True

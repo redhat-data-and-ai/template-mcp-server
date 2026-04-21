@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from template_mcp_server.src.oauth.service import (
+from rfe_mcp_server.src.oauth.service import (
     add_token_to_code,
     base64url_encode,
     cleanup_storage,
@@ -90,9 +90,7 @@ class TestUtilityFunctions:
     def test_verify_code_challenge_error_handling(self):
         """Test PKCE code challenge verification error handling."""
         # Test with invalid input that causes an exception
-        with patch(
-            "template_mcp_server.src.oauth.service.hashlib.sha256"
-        ) as mock_sha256:
+        with patch("rfe_mcp_server.src.oauth.service.hashlib.sha256") as mock_sha256:
             mock_sha256.side_effect = Exception("Hash error")
 
             result = verify_code_challenge("verifier", "challenge")
@@ -105,7 +103,7 @@ class TestStorageService:
     @pytest.mark.asyncio
     async def test_get_storage_service_not_initialized(self):
         """Test getting storage service when not initialized."""
-        with patch("template_mcp_server.src.oauth.service._storage_service", None):
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", None):
             with pytest.raises(RuntimeError, match="Storage service not initialized"):
                 await get_storage_service()
 
@@ -113,9 +111,7 @@ class TestStorageService:
     async def test_get_storage_service_initialized(self):
         """Test getting storage service when initialized."""
         mock_storage = Mock()
-        with patch(
-            "template_mcp_server.src.oauth.service._storage_service", mock_storage
-        ):
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", mock_storage):
             result = await get_storage_service()
             assert result == mock_storage
 
@@ -126,12 +122,10 @@ class TestStorageService:
         mock_storage.connect = AsyncMock()
 
         with patch(
-            "template_mcp_server.src.oauth.service.StorageService"
+            "rfe_mcp_server.src.oauth.service.StorageService"
         ) as mock_storage_class:
             mock_storage_class.return_value = mock_storage
-            with patch(
-                "template_mcp_server.src.oauth.service.settings"
-            ) as mock_settings:
+            with patch("rfe_mcp_server.src.oauth.service.settings") as mock_settings:
                 mock_settings.POSTGRES_HOST = "localhost"
                 mock_settings.POSTGRES_PORT = 5432
                 mock_settings.POSTGRES_DB = "testdb"
@@ -157,10 +151,8 @@ class TestStorageService:
     @pytest.mark.asyncio
     async def test_initialize_storage_missing_config(self):
         """Test storage initialization with missing configuration."""
-        with patch("template_mcp_server.src.oauth.service._storage_service", None):
-            with patch(
-                "template_mcp_server.src.oauth.service.settings"
-            ) as mock_settings:
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", None):
+            with patch("rfe_mcp_server.src.oauth.service.settings") as mock_settings:
                 mock_settings.POSTGRES_HOST = None
                 mock_settings.POSTGRES_PORT = 5432
                 mock_settings.POSTGRES_DB = "testdb"
@@ -175,9 +167,7 @@ class TestStorageService:
     async def test_initialize_storage_already_initialized(self):
         """Test storage initialization when already initialized."""
         mock_storage = Mock()
-        with patch(
-            "template_mcp_server.src.oauth.service._storage_service", mock_storage
-        ):
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", mock_storage):
             result = await initialize_storage()
             assert result == mock_storage
 
@@ -187,16 +177,14 @@ class TestStorageService:
         mock_storage = AsyncMock()
         mock_storage.disconnect = AsyncMock()
 
-        with patch(
-            "template_mcp_server.src.oauth.service._storage_service", mock_storage
-        ):
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", mock_storage):
             await cleanup_storage()
             mock_storage.disconnect.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_cleanup_storage_without_service(self):
         """Test storage cleanup when no service exists."""
-        with patch("template_mcp_server.src.oauth.service._storage_service", None):
+        with patch("rfe_mcp_server.src.oauth.service._storage_service", None):
             # Should not raise any exception
             await cleanup_storage()
 
@@ -215,7 +203,7 @@ class TestClientManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_client("client123", "secret123")
@@ -230,7 +218,7 @@ class TestClientManagement:
         mock_storage.get_client.return_value = None
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_client("client123", "secret123")
@@ -247,7 +235,7 @@ class TestClientManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_client("client123", "wrong_secret")
@@ -264,7 +252,7 @@ class TestClientManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_client("client123")
@@ -278,11 +266,11 @@ class TestClientManagement:
         mock_storage.store_client.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             with patch(
-                "template_mcp_server.src.oauth.service.generate_random_string"
+                "rfe_mcp_server.src.oauth.service.generate_random_string"
             ) as mock_gen:
                 mock_gen.side_effect = ["client123", "secret123"]
 
@@ -313,7 +301,7 @@ class TestClientManagement:
         mock_storage.get_client_by_name_and_redirect_uris.return_value = existing_client
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await register_client(
@@ -333,7 +321,7 @@ class TestClientManagement:
         mock_storage.store_client.return_value = False
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             with pytest.raises(
@@ -352,11 +340,11 @@ class TestAuthorizationCodeFlow:
         mock_storage.store_authorization_code.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             with patch(
-                "template_mcp_server.src.oauth.service.generate_random_string",
+                "rfe_mcp_server.src.oauth.service.generate_random_string",
                 return_value="code123",
             ):
                 result = await create_authorization_code(
@@ -380,7 +368,7 @@ class TestAuthorizationCodeFlow:
         token_set = {"access_token": "token123", "refresh_token": "refresh123"}
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             await add_token_to_code("code123", token_set)
@@ -398,7 +386,7 @@ class TestAuthorizationCodeFlow:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_authorization_code("code123")
@@ -414,7 +402,7 @@ class TestAuthorizationCodeFlow:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_authorization_code("code123")
@@ -427,7 +415,7 @@ class TestAuthorizationCodeFlow:
         mock_storage.get_authorization_code.return_value = None
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_authorization_code("code123")
@@ -440,7 +428,7 @@ class TestAuthorizationCodeFlow:
         mock_storage.delete_authorization_code.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             await mark_code_as_used("code123")
@@ -453,7 +441,7 @@ class TestAuthorizationCodeFlow:
         mock_storage.delete_authorization_code.return_value = False
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             await mark_code_as_used("code123")
@@ -476,7 +464,7 @@ class TestTokenManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await store_access_token("token123", token_data)
@@ -495,7 +483,7 @@ class TestTokenManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await retrieve_access_token("token123")
@@ -511,7 +499,7 @@ class TestTokenManagement:
         token_data = {"client_id": "client123", "expires_at": time.time() + 86400}
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await store_refresh_token("refresh123", token_data)
@@ -527,7 +515,7 @@ class TestTokenManagement:
         mock_storage.get_refresh_token.return_value = {"client_id": "client123"}
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await retrieve_refresh_token("refresh123")
@@ -544,7 +532,7 @@ class TestTokenManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_refresh_token("refresh123")
@@ -560,7 +548,7 @@ class TestTokenManagement:
         }
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_refresh_token("refresh123")
@@ -573,7 +561,7 @@ class TestTokenManagement:
         mock_storage.get_refresh_token.return_value = None
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await validate_refresh_token("refresh123")
@@ -586,7 +574,7 @@ class TestTokenManagement:
         mock_storage.delete_access_token.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await revoke_access_token("token123")
@@ -600,7 +588,7 @@ class TestTokenManagement:
         mock_storage.delete_refresh_token.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await revoke_refresh_token("refresh123")
@@ -614,7 +602,7 @@ class TestTokenManagement:
         mock_storage.get_status.return_value = {"healthy": True, "type": "postgresql"}
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             result = await get_storage_status()
@@ -650,11 +638,11 @@ class TestOAuthServiceIntegration:
         mock_storage.store_refresh_token.return_value = True
 
         with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
+            "rfe_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
             with patch(
-                "template_mcp_server.src.oauth.service.generate_random_string"
+                "rfe_mcp_server.src.oauth.service.generate_random_string"
             ) as mock_gen:
                 mock_gen.side_effect = ["client123", "secret123", "code123"]
 
@@ -694,8 +682,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_authorization_code_expired(self):
         """Test validation of expired authorization code."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_authorization_code.return_value = {
@@ -714,8 +702,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_authorization_code_not_found(self):
         """Test validation of non-existent authorization code."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_authorization_code.return_value = None
@@ -729,8 +717,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_authorization_code_storage_error(self):
         """Test validation when storage service fails."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_authorization_code.side_effect = Exception(
@@ -745,8 +733,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_refresh_token_expired(self):
         """Test validation of expired refresh token."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_refresh_token.return_value = {
@@ -764,8 +752,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_refresh_token_missing_expiry(self):
         """Test validation of refresh token without expiry time (should not expire)."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_refresh_token.return_value = {
@@ -784,8 +772,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_client_with_secret_mismatch(self):
         """Test client validation with mismatched secret."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_client.return_value = {
@@ -803,8 +791,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_validate_client_no_secret_in_store(self):
         """Test client validation when stored client has no secret."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_client.return_value = {
@@ -823,8 +811,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_create_authorization_code_with_defaults(self):
         """Test creating authorization code with default values."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.store_authorization_code.return_value = True
@@ -832,7 +820,7 @@ class TestOAuthServiceEdgeCases:
         oauth_service = OAuthService(mock_storage)
 
         with patch(
-            "template_mcp_server.src.oauth.service.generate_random_string"
+            "rfe_mcp_server.src.oauth.service.generate_random_string"
         ) as mock_gen:
             mock_gen.return_value = "generated_code"
 
@@ -853,8 +841,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_register_client_storage_failure(self):
         """Test client registration when storage fails."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_client_by_name_and_redirect_uris.return_value = None
@@ -871,8 +859,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_register_client_returns_existing(self):
         """Test that existing client is returned instead of creating new one."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         existing_client = {
             "id": "existing_client_id",
@@ -902,8 +890,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_mark_code_as_used_storage_failure(self):
         """Test marking authorization code as used when storage fails."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.delete_authorization_code.side_effect = Exception("Storage error")
@@ -916,8 +904,8 @@ class TestOAuthServiceEdgeCases:
     @pytest.mark.asyncio
     async def test_token_operations_with_storage_failures(self):
         """Test various token operations when storage fails."""
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         oauth_service = OAuthService(mock_storage)
@@ -954,8 +942,8 @@ class TestOAuthServiceConcurrency:
         """Test concurrent validation of the same authorization code."""
         import asyncio
 
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         mock_storage = AsyncMock(spec=StorageService)
         mock_storage.get_authorization_code.return_value = {
@@ -983,8 +971,8 @@ class TestOAuthServiceConcurrency:
         """Test concurrent registration of clients with same name and redirect URIs."""
         import asyncio
 
-        from template_mcp_server.src.oauth.service import OAuthService
-        from template_mcp_server.src.storage.storage_service import StorageService
+        from rfe_mcp_server.src.oauth.service import OAuthService
+        from rfe_mcp_server.src.storage.storage_service import StorageService
 
         # First call returns None (no existing client), subsequent calls return existing client
         existing_client = {
@@ -1028,7 +1016,7 @@ class TestOAuthServiceConcurrency:
         ]
 
         with patch(
-            "template_mcp_server.src.oauth.service.generate_random_string"
+            "rfe_mcp_server.src.oauth.service.generate_random_string"
         ) as mock_gen:
             mock_gen.side_effect = ["new_client_id", "new_secret"]
 

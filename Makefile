@@ -49,7 +49,7 @@ lint: ## Run ruff linter and mypy type checker
 		exit 1; \
 	fi
 	.venv/bin/ruff check .
-	.venv/bin/mypy template_mcp_server/
+	.venv/bin/mypy rfe_mcp_server/
 
 format: ## Auto-fix lint issues and format code
 	@if [ ! -d ".venv" ]; then \
@@ -64,7 +64,7 @@ coverage: ## Run tests with coverage report (80% minimum)
 		echo "Error: Virtual environment not found. Run 'make install' first."; \
 		exit 1; \
 	fi
-	.venv/bin/python -m pytest --cov=template_mcp_server --cov-report=term-missing --cov-report=html --cov-fail-under=80
+	.venv/bin/python -m pytest --cov=rfe_mcp_server --cov-report=term-missing --cov-report=html --cov-fail-under=80
 
 pre-commit: ## Run all pre-commit hooks
 	@if [ ! -d ".venv" ]; then \
@@ -79,7 +79,7 @@ local: ## Start MCP server locally
 	@echo "Starting MCP server locally on port 5001..."
 	@echo "Health check available at: http://localhost:5001/health"
 	@echo "Press Ctrl+C to stop the server"
-	@. .venv/bin/activate && python -m template_mcp_server.src.main
+	@. .venv/bin/activate && python -m rfe_mcp_server.src.main
 
 container: ## Build and run with podman compose
 	export PODMAN_COMPOSE_SILENT=true
@@ -99,23 +99,23 @@ deploy: ## Deploy to target (usage: make deploy openshift)
 		oc project $(NAMESPACE) || (echo "Error: Cannot switch to namespace '$(NAMESPACE)'. Check permissions." && exit 1); \
 		echo "Updating namespace references..."; \
 		sed -i.bak "s|NAMESPACE_PLACEHOLDER|$(NAMESPACE)|g" deployment/openshift/deployment.yaml; \
-		sed -i.bak "s|namespace: template-mcp-server|namespace: $(NAMESPACE)|g" deployment/openshift/kustomization.yaml; \
+		sed -i.bak "s|namespace: rfe-mcp-server|namespace: $(NAMESPACE)|g" deployment/openshift/kustomization.yaml; \
 		echo "Creating BuildConfig and ImageStream..."; \
 		oc apply -f deployment/openshift/buildconfig.yaml; \
 		oc apply -f deployment/openshift/imagestream.yaml; \
 		echo "Building container image from source..."; \
-		oc start-build template-mcp-server --from-dir=. --follow || (mv deployment/openshift/deployment.yaml.bak deployment/openshift/deployment.yaml 2>/dev/null; mv deployment/openshift/kustomization.yaml.bak deployment/openshift/kustomization.yaml 2>/dev/null; exit 1); \
+		oc start-build rfe-mcp-server --from-dir=. --follow || (mv deployment/openshift/deployment.yaml.bak deployment/openshift/deployment.yaml 2>/dev/null; mv deployment/openshift/kustomization.yaml.bak deployment/openshift/kustomization.yaml 2>/dev/null; exit 1); \
 		echo "Deploying resources to OpenShift..."; \
 		oc apply -k deployment/openshift/ || (mv deployment/openshift/deployment.yaml.bak deployment/openshift/deployment.yaml 2>/dev/null; mv deployment/openshift/kustomization.yaml.bak deployment/openshift/kustomization.yaml 2>/dev/null; exit 1); \
 		rm -f deployment/openshift/deployment.yaml.bak deployment/openshift/kustomization.yaml.bak; \
 		echo "Deployment complete!"; \
 		echo "Checking deployment status..."; \
-		oc get pods -l app=template-mcp-server; \
+		oc get pods -l app=rfe-mcp-server; \
 		echo ""; \
 		echo "Useful commands:"; \
-		echo "  View logs: oc logs -l app=template-mcp-server --tail=100"; \
-		echo "  Get route: oc get route template-mcp-server"; \
-		echo "  Check status: oc get pods,svc,route -l app=template-mcp-server"
+		echo "  View logs: oc logs -l app=rfe-mcp-server --tail=100"; \
+		echo "  Get route: oc get route rfe-mcp-server"; \
+		echo "  Check status: oc get pods,svc,route -l app=rfe-mcp-server"
 	else \
 		echo "Usage: make deploy [openshift]"; \
 		echo "Available deployment targets: openshift"; \
@@ -128,7 +128,7 @@ undeploy: ## Remove deployment (usage: make undeploy openshift)
 		which oc > /dev/null || (echo "Error: oc CLI not found. Please install OpenShift CLI." && exit 1); \
 		oc project $(NAMESPACE) || (echo "Error: Cannot switch to namespace '$(NAMESPACE)'" && exit 1); \
 		echo "Removing OpenShift deployment..."; \
-		oc delete deployment,service,route,configmap,secret,pvc,buildconfig,imagestream -l app=template-mcp-server 2>/dev/null || true; \
+		oc delete deployment,service,route,configmap,secret,pvc,buildconfig,imagestream -l app=rfe-mcp-server 2>/dev/null || true; \
 		echo "Undeployment complete!"; \
 	else \
 		echo "Usage: make undeploy [openshift]"; \

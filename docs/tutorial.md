@@ -16,17 +16,17 @@ cp .env.example .env
 
 ## Step 1: Create the Tool File
 
-Create `template_mcp_server/src/tools/greet_tool.py`:
+Create `rfe_mcp_server/src/tools/greet_tool.py`:
 
 ```python
-"""Greet tool for the Template MCP Server.
+"""Greet tool for the RFE MCP Server.
 
 Returns a personalised greeting for the given name.
 """
 
 from typing import Any, Dict
 
-from template_mcp_server.utils.pylogger import get_python_logger
+from rfe_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
@@ -97,12 +97,12 @@ def greet_user(
 
 ## Step 2: Register the Tool
 
-Open `template_mcp_server/src/mcp.py` and make two edits.
+Open `rfe_mcp_server/src/mcp.py` and make two edits.
 
 **Add the import** (with the other tool imports near the top):
 
 ```python
-from template_mcp_server.src.tools.greet_tool import greet_user
+from rfe_mcp_server.src.tools.greet_tool import greet_user
 ```
 
 **Register in `_register_mcp_tools`** (add one line):
@@ -124,7 +124,7 @@ def _register_mcp_tools(self) -> None:
 Add a new test class to `tests/test_tools.py`:
 
 ```python
-from template_mcp_server.src.tools.greet_tool import greet_user
+from rfe_mcp_server.src.tools.greet_tool import greet_user
 
 
 class TestGreetTool:
@@ -175,7 +175,7 @@ python -m pytest tests/test_tools.py::TestGreetTool -v
 make test
 
 # Start the server
-template-mcp-server
+rfe-mcp-server
 
 # In another terminal -- list tools (SSE transport example)
 curl http://localhost:5001/health
@@ -187,7 +187,7 @@ If using one of the [example clients](../examples/), the `greet_user` tool will 
 
 ## What You Just Learned
 
-1. **Tool file** -- one function per file in `template_mcp_server/src/tools/`.
+1. **Tool file** -- one function per file in `rfe_mcp_server/src/tools/`.
 2. **Registration** -- two lines in `mcp.py`: one import, one `self.mcp.tool()()` call.
 3. **Testing** -- class in `test_tools.py` covering success, edge, and error paths.
 4. **Convention** -- structured dict returns, metadata docstrings, input validation, logging.
@@ -199,5 +199,5 @@ If using one of the [example clients](../examples/), the `greet_user` tool will 
 | Full architecture and tool patterns | [Architecture](architecture.md) |
 | Async tools, OAuth, storage | [Development Guide](development.md) |
 | Client examples (FastMCP, LangGraph) | [Examples](../examples/) |
-| Tool documentation format reference | [Tools README](../template_mcp_server/src/tools/README.md) |
+| Tool documentation format reference | [Tools README](../rfe_mcp_server/src/tools/README.md) |
 | Container and OpenShift deployment | [Deployment](deployment.md) |

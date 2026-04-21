@@ -1,9 +1,9 @@
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:
-  name: template-mcp-server
+  name: rfe-mcp-server
   labels:
-    app: template-mcp-server
+    app: rfe-mcp-server
     component: mcp-server
 spec:
   lookupPolicy:

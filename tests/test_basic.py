@@ -1,11 +1,11 @@
-"""Basic tests for the Template MCP Server."""
+"""Basic tests for the RFE MCP Server."""
 
 import importlib
 from unittest.mock import Mock, patch
 
 import pytest
 
-import template_mcp_server.src.settings as settings_mod
+import rfe_mcp_server.src.settings as settings_mod
 
 
 class TestSettings:
@@ -14,7 +14,7 @@ class TestSettings:
     def test_default_settings(self):
         """Test default settings configuration."""
         # Arrange
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_HOST = "0.0.0.0"
             mock_settings.MCP_PORT = 4000
@@ -23,7 +23,7 @@ class TestSettings:
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -36,13 +36,13 @@ class TestSettings:
     def test_port_validation(self):
         """Test port validation logic."""
         # Arrange
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_PORT = 4000
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -53,13 +53,13 @@ class TestSettings:
         """Test log level validation logic."""
         # Arrange
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.PYTHON_LOG_LEVEL = "INFO"
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -70,13 +70,13 @@ class TestSettings:
         """Test transport protocol validation logic."""
         # Arrange
         valid_protocols = ["streamable-http", "sse", "http"]
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_TRANSPORT_PROTOCOL = "streamable-http"
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -92,20 +92,20 @@ class TestServer:
         monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "dummy_account")
 
         importlib.reload(settings_mod)
-        import template_mcp_server.src.mcp as server_mod
+        import rfe_mcp_server.src.mcp as server_mod
 
         importlib.reload(server_mod)
-        self.TemplateMCPServer = server_mod.TemplateMCPServer
+        self.RFEMCPServer = server_mod.RFEMCPServer
 
     def test_server_initialization(self):
         """Test that server can be initialized."""
         with (
-            patch("template_mcp_server.src.mcp.settings") as mock_settings,
-            patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers"),
-            patch("template_mcp_server.src.mcp.FastMCP"),
+            patch("rfe_mcp_server.src.mcp.settings") as mock_settings,
+            patch("rfe_mcp_server.src.mcp.force_reconfigure_all_loggers"),
+            patch("rfe_mcp_server.src.mcp.FastMCP"),
         ):
             mock_settings.PYTHON_LOG_LEVEL = "INFO"
-            server = self.TemplateMCPServer()
+            server = self.RFEMCPServer()
             assert server is not None
             assert hasattr(server, "mcp")
             assert hasattr(server, "_register_mcp_tools")
@@ -113,36 +113,36 @@ class TestServer:
     def test_server_has_mcp_tools(self):
         """Test that server has MCP tools registered."""
         with (
-            patch("template_mcp_server.src.mcp.settings") as mock_settings,
-            patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers"),
-            patch("template_mcp_server.src.mcp.FastMCP"),
+            patch("rfe_mcp_server.src.mcp.settings") as mock_settings,
+            patch("rfe_mcp_server.src.mcp.force_reconfigure_all_loggers"),
+            patch("rfe_mcp_server.src.mcp.FastMCP"),
         ):
             mock_settings.PYTHON_LOG_LEVEL = "INFO"
-            server = self.TemplateMCPServer()
+            server = self.RFEMCPServer()
             assert hasattr(server, "_register_mcp_tools")
 
     def test_server_mcp_instance(self):
         """Test that server has a valid FastMCP instance."""
         with (
-            patch("template_mcp_server.src.mcp.settings") as mock_settings,
-            patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers"),
-            patch("template_mcp_server.src.mcp.FastMCP"),
+            patch("rfe_mcp_server.src.mcp.settings") as mock_settings,
+            patch("rfe_mcp_server.src.mcp.force_reconfigure_all_loggers"),
+            patch("rfe_mcp_server.src.mcp.FastMCP"),
         ):
             mock_settings.PYTHON_LOG_LEVEL = "INFO"
-            server = self.TemplateMCPServer()
+            server = self.RFEMCPServer()
             assert server.mcp is not None
             assert hasattr(server.mcp, "tool")
 
     def test_transport_protocol_configuration(self):
         """Test transport protocol configuration."""
         # Arrange
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_TRANSPORT_PROTOCOL = "streamable-http"
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -152,11 +152,11 @@ class TestServer:
     def test_health_endpoint(self):
         """Test health endpoint functionality."""
         # Arrange
-        with patch("template_mcp_server.src.api.app") as mock_app:
+        with patch("rfe_mcp_server.src.api.app") as mock_app:
             mock_app.routes = [Mock(path="/health")]
 
             # Act
-            from template_mcp_server.src.api import app
+            from rfe_mcp_server.src.api import app
 
             # Assert
             assert app is not None
@@ -171,11 +171,11 @@ class TestAPI:
     def test_health_endpoint(self):
         """Test health endpoint functionality."""
         # Arrange
-        with patch("template_mcp_server.src.api.app") as mock_app:
+        with patch("rfe_mcp_server.src.api.app") as mock_app:
             mock_app.routes = [Mock(path="/health")]
 
             # Act
-            from template_mcp_server.src.api import app
+            from rfe_mcp_server.src.api import app
 
             # Assert
             assert app is not None
@@ -189,13 +189,13 @@ class TestMain:
 
     def test_main_module_import(self):
         """Test that main module can be imported."""
-        import template_mcp_server.src.main as main
+        import rfe_mcp_server.src.main as main
 
         assert main is not None
 
     def test_main_functions_exist(self):
         """Test that main functions exist."""
-        import template_mcp_server.src.main as main
+        import rfe_mcp_server.src.main as main
 
         assert hasattr(main, "main")
         assert hasattr(main, "run")
@@ -216,13 +216,13 @@ class TestIntegration:
     def test_module_imports(self):
         """Test that all modules can be imported without errors."""
         modules_to_test = [
-            "template_mcp_server.src.mcp",
-            "template_mcp_server.src.settings",
-            "template_mcp_server.src.main",
-            "template_mcp_server.src.tools.multiply_tool",
-            "template_mcp_server.src.resources.redhat_logo",
-            "template_mcp_server.src.prompts.code_review_prompt",
-            "template_mcp_server.utils.pylogger",
+            "rfe_mcp_server.src.mcp",
+            "rfe_mcp_server.src.settings",
+            "rfe_mcp_server.src.main",
+            "rfe_mcp_server.src.tools.multiply_tool",
+            "rfe_mcp_server.src.resources.redhat_logo",
+            "rfe_mcp_server.src.prompts.code_review_prompt",
+            "rfe_mcp_server.utils.pylogger",
         ]
 
         for module_name in modules_to_test:
@@ -235,24 +235,24 @@ class TestIntegration:
     def test_package_structure(self):
         """Test that the package structure is correct."""
         # Test that the main package exists
-        import template_mcp_server
+        import rfe_mcp_server
 
-        assert template_mcp_server is not None
+        assert rfe_mcp_server is not None
 
         # Test that src package exists
-        import template_mcp_server.src
+        import rfe_mcp_server.src
 
-        assert template_mcp_server.src is not None
+        assert rfe_mcp_server.src is not None
 
         # Test that utils package exists
-        import template_mcp_server.utils
+        import rfe_mcp_server.utils
 
-        assert template_mcp_server.utils is not None
+        assert rfe_mcp_server.utils is not None
 
     def test_version_consistency(self):
         """Test that version information is consistent."""
         try:
-            from template_mcp_server import __version__
+            from rfe_mcp_server import __version__
 
             assert __version__ is not None
             assert isinstance(__version__, str)
@@ -266,14 +266,14 @@ class TestConfiguration:
     def test_environment_variable_handling(self):
         """Test environment variable handling."""
         # Arrange
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_HOST = "0.0.0.0"
             mock_settings.MCP_PORT = 4000
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
@@ -284,14 +284,14 @@ class TestConfiguration:
     def test_ssl_configuration(self):
         """Test SSL configuration handling."""
         # Arrange
-        with patch("template_mcp_server.src.settings.Settings") as mock_settings_class:
+        with patch("rfe_mcp_server.src.settings.Settings") as mock_settings_class:
             mock_settings = Mock()
             mock_settings.MCP_SSL_KEYFILE = "/path/to/key.pem"
             mock_settings.MCP_SSL_CERTFILE = "/path/to/cert.pem"
             mock_settings_class.return_value = mock_settings
 
             # Act
-            from template_mcp_server.src.settings import Settings
+            from rfe_mcp_server.src.settings import Settings
 
             settings = Settings()
 
