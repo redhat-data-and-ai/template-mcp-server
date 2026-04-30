@@ -278,6 +278,42 @@ class Settings(BaseSettings):
         },
     )
 
+    # Jira Configuration
+    JIRA_BASE_URL: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "JIRA_BASE_URL",
+            "description": "Jira Cloud instance base URL",
+            "example": "https://jira.domain.name.com",
+        },
+    )
+    JIRA_USER_EMAIL: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "JIRA_USER_EMAIL",
+            "description": "Jira user email for Basic auth (email:token). Required when using Basic auth.",
+            "example": "service-account@domain.name.com",
+        },
+    )
+    JIRA_API_TOKEN: str = Field(
+        default="",
+        json_schema_extra={
+            "env": "JIRA_API_TOKEN",
+            "description": "Jira API token for authentication",
+            "sensitive": True,
+        },
+    )
+    JIRA_MAX_RESULTS: int = Field(
+        default=500,
+        ge=1,
+        le=2000,
+        json_schema_extra={
+            "env": "JIRA_MAX_RESULTS",
+            "description": "Maximum total issues to fetch from Jira across all pages",
+            "example": 500,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.

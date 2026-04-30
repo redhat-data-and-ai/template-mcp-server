@@ -18,6 +18,9 @@ from rfe_mcp_server.src.tools.multiply_tool import (
 from rfe_mcp_server.src.tools.redhat_logo_tool import (
     get_redhat_logo,
 )
+from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+    rfe_get_open_rfes_with_cases,
+)
 from rfe_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -59,8 +62,10 @@ class RFEMCPServer:
         - multiply_numbers: Basic arithmetic operations
         - generate_code_review_prompt: Code review prompt generation
         - get_redhat_logo: Red Hat logo retrieval as base64
+        - rfe_get_open_rfes_with_cases: Open RHEL RFEs with linked customer cases
         """
         # Register all the imported tools
         self.mcp.tool()(multiply_numbers)
         self.mcp.tool()(generate_code_review_prompt)
         self.mcp.tool()(get_redhat_logo)
+        self.mcp.tool()(rfe_get_open_rfes_with_cases)

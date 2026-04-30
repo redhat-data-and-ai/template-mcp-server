@@ -22,9 +22,10 @@ Establish a centralized service that:
 
 | Tool | Description |
 | ---- | ----------- |
-| Query RFEs by customer/account | Retrieve all RFEs associated with a given customer or account |
-| Query RFEs by system/asset relevance | Find RFEs relevant to specific systems or assets |
-| Retrieve RFE status & metadata | Get structured status (open, planned, implemented) and details for individual RFEs |
+| `rfe_get_open_rfes_with_cases` | Retrieve all open RHEL Story-type RFEs from Jira that have at least one linked customer case. Returns structured records with RFE ID, summary, status, priority, and linked-cases value. Requires `JIRA_BASE_URL` and `JIRA_API_TOKEN`. |
+| Query RFEs by customer/account | *(planned)* Retrieve all RFEs associated with a given customer or account |
+| Query RFEs by system/asset relevance | *(planned)* Find RFEs relevant to specific systems or assets |
+| Retrieve RFE status & metadata | *(planned)* Get structured status (open, planned, implemented) and details for individual RFEs |
 
 Retrieved data is structured, consistent, and suitable for consumption by downstream tools (e.g., LLMs, internal tooling).
 
@@ -83,6 +84,14 @@ curl http://localhost:5001/health
 
 ## Configuration
 
+> **Required before use:** The following variables have no defaults and must be set or the Jira tools will return an error.
+>
+> | Variable | Description |
+> | -------- | ----------- |
+> | `JIRA_BASE_URL` | Jira Cloud instance base URL, no trailing slash (e.g. `https://domain.name.com`) |
+> | `JIRA_USER_EMAIL` | Jira account email for Basic auth (`email:api_token`). Required when using Basic auth. |
+> | `JIRA_API_TOKEN` | Jira API token — generate at [Atlassian account settings](https://id.atlassian.com/manage-profile/security/api-tokens) |
+
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
 | `MCP_HOST` | `localhost` | Server bind address |
@@ -93,6 +102,7 @@ curl http://localhost:5001/health
 | `ENABLE_AUTH` | `False`* | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
 | `USE_EXTERNAL_BROWSER_AUTH` | `False` | Browser-based OAuth for local dev |
 | `PYTHON_LOG_LEVEL` | `INFO` | Logging level |
+| `JIRA_MAX_RESULTS` | `500` | Maximum total issues to fetch from Jira across all pages (1–2000). |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
 

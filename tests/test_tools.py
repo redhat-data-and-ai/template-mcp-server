@@ -1,6 +1,10 @@
 """Tests for all MCP tools."""
 
 import asyncio
+
+# Import httpx at module level to capture the real module BEFORE the autouse
+# mock_imports fixture in conftest.py replaces sys.modules['httpx'] with a Mock.
+import httpx as _real_httpx
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -364,3 +368,537 @@ class TestRedHatLogoTool:
         assert result["operation"] == "get_redhat_logo"
         assert result["error"] == "permission_denied"
         assert "Permission denied reading logo file" in result["message"]
+
+
+class TestRfeOpenRfesTool:
+    """Tests for rfe_get_open_rfes_with_cases tool."""
+
+    # ---------------------------------------------------------------------------
+    # Helpers / fixtures
+    # ---------------------------------------------------------------------------
+
+    def _make_jira_page(self, issues, is_last=True, next_page_token=None):
+        """Return a mock Jira search/jql response body.
+
+        The /rest/api/3/search/jql endpoint uses cursor-based pagination
+        (nextPageToken / isLast) rather than offset-based (startAt / total).
+        """
+        body: dict = {"issues": issues, "isLast": is_last}
+        if next_page_token is not None:
+            body["nextPageToken"] = next_page_token
+        return body
+
+    def _make_issue(
+        self,
+        key="RHEL-1",
+        summary="Test RFE",
+        status_name="In Progress",
+        priority_name="Major",
+        cf_value="abc123==",
+    ):
+        """Return a raw Jira issue dict with customfield_10978.
+
+        customfield_10978 is returned as a plain string by this Jira instance,
+        not as a {"value": ...} dict.
+        """
+        return {
+            "key": key,
+            "fields": {
+                "summary": summary,
+                "status": {"name": status_name},
+                "priority": {"name": priority_name} if priority_name else None,
+                "customfield_10978": cf_value,
+            },
+        }
+
+    def _mock_client(self, responses):
+        """
+        Build a mock httpx.AsyncClient context manager that returns
+        *responses* (list of MagicMock) in order for successive post() calls.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=responses)
+        ctx = MagicMock()
+        ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        ctx.__aexit__ = AsyncMock(return_value=None)
+        return ctx
+
+    def _make_response(self, body, status_code=200):
+        """Return a MagicMock response with the given JSON body and status code."""
+        from unittest.mock import MagicMock
+
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.json.return_value = body
+        return resp
+
+    def _patch_settings(self, monkeypatch, **kwargs):
+        """Apply settings overrides via monkeypatch.
+
+        Patch the settings object that the tool module itself holds a reference
+        to. Importing via the tool module avoids a stale-reference problem that
+        arises when test_basic.py's autouse fixture reloads
+        rfe_mcp_server.src.settings, creating a new settings instance while the
+        tool module retains a reference to the old one.
+        """
+        import rfe_mcp_server.src.tools.rfe_open_rfes_tool as _tool_mod
+
+        defaults = {
+            "JIRA_BASE_URL": "https://jira.example.com",
+            "JIRA_USER_EMAIL": "test@example.com",
+            "JIRA_API_TOKEN": "test-token",
+            "JIRA_MAX_RESULTS": 500,
+        }
+        defaults.update(kwargs)
+        for k, v in defaults.items():
+            monkeypatch.setattr(_tool_mod.settings, k, v)
+
+    # ---------------------------------------------------------------------------
+    # Success paths
+    # ---------------------------------------------------------------------------
+
+    async def test_success_single_page(self, monkeypatch):
+        """Single page of results returned correctly."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        issue = self._make_issue()
+        page = self._make_jira_page([issue])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        assert result["operation"] == "rfe_get_open_rfes_with_cases"
+        assert result["total"] == 1
+        assert len(result["issues"]) == 1
+        issue_out = result["issues"][0]
+        assert issue_out["id"] == "RHEL-1"
+        assert issue_out["summary"] == "Test RFE"
+        assert issue_out["status"] == "In Progress"
+        assert issue_out["priority"] == "Major"
+        assert issue_out["linked_cases_value"] == "abc123=="
+
+    async def test_success_empty_result_set(self, monkeypatch):
+        """Empty result set returns success with empty issues list."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        page = self._make_jira_page([])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        assert result["total"] == 0
+        assert result["issues"] == []
+        assert "No open RHEL RFEs" in result["message"]
+
+    async def test_priority_null(self, monkeypatch):
+        """Issue with null priority returns priority=None in result."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        issue = self._make_issue(priority_name=None)
+        page = self._make_jira_page([issue])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        assert result["issues"][0]["priority"] is None
+
+    async def test_pagination_multiple_pages(self, monkeypatch):
+        """Tool fetches multiple pages when total exceeds page size."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        issues_p1 = [self._make_issue(key=f"RHEL-{i}") for i in range(50)]
+        issues_p2 = [self._make_issue(key=f"RHEL-{i}") for i in range(50, 75)]
+        page1 = self._make_jira_page(
+            issues_p1, is_last=False, next_page_token="cursor-page2"
+        )
+        page2 = self._make_jira_page(issues_p2, is_last=True)
+        ctx = self._mock_client(
+            [self._make_response(page1), self._make_response(page2)]
+        )
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        assert result["total"] == 75
+        assert "Successfully retrieved 75" in result["message"]
+
+    async def test_pagination_cap_applied(self, monkeypatch):
+        """Results are capped at JIRA_MAX_RESULTS and a warning is included."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch, JIRA_MAX_RESULTS=3)
+        # Jira has more pages (isLast=False), but we cap at JIRA_MAX_RESULTS=3
+        issues = [self._make_issue(key=f"RHEL-{i}") for i in range(50)]
+        page = self._make_jira_page(
+            issues[:50], is_last=False, next_page_token="cursor-p2"
+        )
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        assert result["total"] == 3
+        assert "capped" in result["message"].lower()
+        assert "JIRA_MAX_RESULTS" in result["message"]
+
+    # ---------------------------------------------------------------------------
+    # Credential validation
+    # ---------------------------------------------------------------------------
+
+    async def test_missing_jira_base_url(self, monkeypatch):
+        """Missing JIRA_BASE_URL returns structured error."""
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch, JIRA_BASE_URL="")
+
+        result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert result["total"] == 0
+        assert result["issues"] == []
+        assert "credentials not configured" in result["message"].lower()
+
+    async def test_missing_jira_api_token(self, monkeypatch):
+        """Missing JIRA_API_TOKEN returns structured error."""
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch, JIRA_API_TOKEN="")
+
+        result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert result["total"] == 0
+        assert result["issues"] == []
+        assert "credentials not configured" in result["message"].lower()
+
+    # ---------------------------------------------------------------------------
+    # HTTP error responses
+    # ---------------------------------------------------------------------------
+
+    async def test_http_401(self, monkeypatch):
+        """HTTP 401 returns structured auth error."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        ctx = self._mock_client([self._make_response({}, status_code=401)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert result["total"] == 0
+        assert result["issues"] == []
+        assert "authentication failed" in result["message"].lower()
+        assert "401" in result["message"]
+
+    async def test_http_403(self, monkeypatch):
+        """HTTP 403 returns structured auth error."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        ctx = self._mock_client([self._make_response({}, status_code=403)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert "authentication failed" in result["message"].lower()
+        assert "403" in result["message"]
+
+    async def test_http_500(self, monkeypatch):
+        """HTTP 500 returns structured server error."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        ctx = self._mock_client([self._make_response({}, status_code=500)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert "server error" in result["message"].lower()
+        assert "500" in result["message"]
+
+    async def test_http_404(self, monkeypatch):
+        """HTTP 4xx (non-401/403) returns structured request error."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        ctx = self._mock_client([self._make_response({}, status_code=404)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert "request failed" in result["message"].lower()
+        assert "404" in result["message"]
+
+    # ---------------------------------------------------------------------------
+    # Network errors
+    # ---------------------------------------------------------------------------
+
+    async def test_network_error_no_exception_propagated(self, monkeypatch):
+        """Network error is caught and returned as structured error.
+
+        conftest.py has an autouse fixture that replaces sys.modules['httpx'] with
+        a Mock() for every test. This means 'import httpx' inside a test returns a
+        Mock, and rfe_open_rfes_tool.httpx is also the Mock (it was imported during
+        test execution, after mock_imports activated). To work around this we:
+
+        1. Use _real_httpx captured at module load time (before mock_imports fires).
+        2. Use monkeypatch to temporarily restore _real_httpx as the tool module's
+           httpx binding so that 'except httpx.RequestError' in the tool evaluates
+           to a real exception class.
+        3. Patch _real_httpx.AsyncClient via patch.object so the tool's HTTP call
+           hits our mock instead of a real server.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        import rfe_mcp_server.src.tools.rfe_open_rfes_tool as _tool_mod
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+
+        # Restore real httpx in the tool module so except httpx.RequestError works.
+        monkeypatch.setattr(_tool_mod, "httpx", _real_httpx)
+
+        # Build a real httpx exception instance.
+        connect_error = _real_httpx.ConnectError("Connection refused")
+
+        async def raising_post(*args, **kwargs):
+            raise connect_error
+
+        mock_client = MagicMock()
+        mock_client.post = raising_post
+
+        mock_cm = MagicMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        # Patch AsyncClient on the real httpx module so the call returns our mock.
+        monkeypatch.setattr(_real_httpx, "AsyncClient", MagicMock(return_value=mock_cm))
+
+        result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "error"
+        assert result["total"] == 0
+        assert result["issues"] == []
+        assert "Failed to reach Jira" in result["message"]
+
+    # ---------------------------------------------------------------------------
+    # Invariants
+    # ---------------------------------------------------------------------------
+
+    async def test_return_type_and_required_keys_on_success(self, monkeypatch):
+        """Success response always contains all required top-level keys."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        page = self._make_jira_page([self._make_issue()])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert isinstance(result, dict)
+        for key in ("status", "operation", "total", "issues", "message"):
+            assert key in result, f"Missing key: {key}"
+
+    async def test_operation_field_invariant_on_error(self, monkeypatch):
+        """operation field is always 'rfe_get_open_rfes_with_cases' on error paths."""
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch, JIRA_BASE_URL="")
+        result = await rfe_get_open_rfes_with_cases()
+
+        assert result["operation"] == "rfe_get_open_rfes_with_cases"
+
+    async def test_jql_sent_to_jira(self, monkeypatch):
+        """The correct JQL string is included in the request payload."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            _JQL,
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        page = self._make_jira_page([])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ) as MockClient:
+            await rfe_get_open_rfes_with_cases()
+
+        mock_client_instance = MockClient.return_value.__aenter__.return_value
+        call_args = mock_client_instance.post.call_args
+        payload = call_args.kwargs.get("json") or call_args.args[1]
+        assert payload["jql"] == _JQL
+
+    async def test_fields_list_sent_to_jira(self, monkeypatch):
+        """The correct fields list is included in the request payload."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            _FIELDS,
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        page = self._make_jira_page([])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ) as MockClient:
+            await rfe_get_open_rfes_with_cases()
+
+        mock_client_instance = MockClient.return_value.__aenter__.return_value
+        call_args = mock_client_instance.post.call_args
+        payload = call_args.kwargs.get("json") or call_args.args[1]
+        assert payload["fields"] == _FIELDS
+
+    async def test_linked_cases_value_passed_through_as_raw_string(self, monkeypatch):
+        """linked_cases_value is the raw string from customfield_10978.value."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch)
+        raw_value = "FjFI4vRDXIGtYHewzEzZdb3f2WURpW1+"
+        issue = self._make_issue(cf_value=raw_value)
+        page = self._make_jira_page([issue])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ):
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["issues"][0]["linked_cases_value"] == raw_value
+
+    # ---------------------------------------------------------------------------
+    # Bearer auth fallback (no JIRA_USER_EMAIL)
+    # ---------------------------------------------------------------------------
+
+    async def test_bearer_auth_used_when_no_email(self, monkeypatch):
+        """Bearer token header is used when JIRA_USER_EMAIL is empty."""
+        from unittest.mock import patch
+
+        from rfe_mcp_server.src.tools.rfe_open_rfes_tool import (
+            rfe_get_open_rfes_with_cases,
+        )
+
+        self._patch_settings(monkeypatch, JIRA_USER_EMAIL="")
+        page = self._make_jira_page([])
+        ctx = self._mock_client([self._make_response(page)])
+
+        with patch(
+            "rfe_mcp_server.src.tools.rfe_open_rfes_tool.httpx.AsyncClient",
+            return_value=ctx,
+        ) as MockClient:
+            result = await rfe_get_open_rfes_with_cases()
+
+        assert result["status"] == "success"
+        # Client should have been constructed with Bearer Authorization header
+        init_kwargs = MockClient.call_args.kwargs
+        assert "Authorization" in init_kwargs.get("headers", {})
+        assert init_kwargs["headers"]["Authorization"].startswith("Bearer ")
