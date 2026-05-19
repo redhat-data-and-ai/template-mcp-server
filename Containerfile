@@ -12,10 +12,11 @@ WORKDIR /app
 
 USER root
 COPY pyproject.toml /app/pyproject.toml
-RUN pip install uv
-RUN uv venv
-RUN source /app/.venv/bin/activate
-RUN uv pip install -r pyproject.toml
+RUN pip install uv \
+    && uv venv \
+    && uv pip install -r pyproject.toml
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 USER default
 
 # --------------------------------------------------------------------------------------------------
@@ -30,6 +31,7 @@ COPY template_mcp_server /app/template_mcp_server
 
 ENV PYTHONPATH=/app
 
+EXPOSE 5001
 
 # --------------------------------------------------------------------------------------------------
 # add entrypoint for the container
