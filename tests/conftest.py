@@ -155,3 +155,25 @@ def mock_client():
     client.put = Mock()
     client.delete = Mock()
     return client
+
+
+@pytest.fixture
+def mock_rate_limit_storage():
+    """Provide mock rate limit storage for testing."""
+    from unittest.mock import AsyncMock
+    import time
+
+    storage = AsyncMock()
+    storage.check_rate_limit = AsyncMock(return_value=(True, 1, time.time() + 60))
+    storage.cleanup = AsyncMock()
+    return storage
+
+
+@pytest.fixture
+def in_memory_rate_limit_storage():
+    """Provide real in-memory rate limit storage for testing."""
+    from template_mcp_server.src.middleware.rate_limit_storage import (
+        InMemoryRateLimitStorage,
+    )
+
+    return InMemoryRateLimitStorage()

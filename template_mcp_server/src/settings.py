@@ -278,6 +278,82 @@ class Settings(BaseSettings):
         },
     )
 
+    # Rate Limiting Configuration
+    RATE_LIMIT_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "RATE_LIMIT_ENABLED",
+            "description": "Enable rate limiting middleware",
+            "example": True,
+        },
+    )
+    RATE_LIMIT_REQUESTS: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        json_schema_extra={
+            "env": "RATE_LIMIT_REQUESTS",
+            "description": "Maximum requests allowed per time window",
+            "example": 100,
+        },
+    )
+    RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        default=60,
+        ge=1,
+        le=3600,
+        json_schema_extra={
+            "env": "RATE_LIMIT_WINDOW_SECONDS",
+            "description": "Time window in seconds for rate limiting",
+            "example": 60,
+        },
+    )
+    RATE_LIMIT_STORAGE_TYPE: str = Field(
+        default="memory",
+        json_schema_extra={
+            "env": "RATE_LIMIT_STORAGE_TYPE",
+            "description": "Storage backend: memory or postgresql",
+            "example": "memory",
+        },
+    )
+    RATE_LIMIT_EXCLUDE_PATHS: List[str] = Field(
+        default=["/health", "/docs", "/redoc", "/openapi.json"],
+        json_schema_extra={
+            "env": "RATE_LIMIT_EXCLUDE_PATHS",
+            "description": "Paths excluded from rate limiting",
+            "example": ["/health", "/docs"],
+        },
+    )
+    RATE_LIMIT_CLEANUP_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=10,
+        le=3600,
+        json_schema_extra={
+            "env": "RATE_LIMIT_CLEANUP_INTERVAL_SECONDS",
+            "description": "Interval in seconds between cleanup operations",
+            "example": 60,
+        },
+    )
+    RATE_LIMIT_MEMORY_RETENTION_SECONDS: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        json_schema_extra={
+            "env": "RATE_LIMIT_MEMORY_RETENTION_SECONDS",
+            "description": "How long to keep inactive clients in memory (seconds)",
+            "example": 3600,
+        },
+    )
+    RATE_LIMIT_DB_RETENTION_HOURS: int = Field(
+        default=24,
+        ge=1,
+        le=168,
+        json_schema_extra={
+            "env": "RATE_LIMIT_DB_RETENTION_HOURS",
+            "description": "How long to keep rate limit records in database (hours)",
+            "example": 24,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
@@ -310,6 +386,25 @@ def validate_config(settings: Settings) -> None:
         raise ValueError(
             f"MCP_TRANSPORT_PROTOCOL must be one of {valid_transport_protocols}, got {settings.MCP_TRANSPORT_PROTOCOL}"
         )
+
+    # Rate limiting validation
+    if settings.RATE_LIMIT_ENABLED:
+        valid_storage = ["memory", "postgresql"]
+        if settings.RATE_LIMIT_STORAGE_TYPE not in valid_storage:
+            raise ValueError(
+                f"RATE_LIMIT_STORAGE_TYPE must be one of {valid_storage}, "
+                f"got {settings.RATE_LIMIT_STORAGE_TYPE}"
+            )
+
+        if (
+            settings.RATE_LIMIT_STORAGE_TYPE == "postgresql"
+            and not settings.ENABLE_AUTH
+        ):
+            logger.warning(
+                "PostgreSQL rate limit storage requires ENABLE_AUTH=True. "
+                "Falling back to memory storage."
+            )
+            settings.RATE_LIMIT_STORAGE_TYPE = "memory"
 
 
 # Create config instance without validation (validation happens in main.py)

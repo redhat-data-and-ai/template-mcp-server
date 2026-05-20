@@ -4,6 +4,7 @@ It initializes the FastAPI app, configures CORS middleware, and sets up
 the MCP server with appropriate transport protocols.
 """
 
+import asyncio
 import webbrowser
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Callable, Optional
@@ -16,6 +17,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from template_mcp_server.src.mcp import TemplateMCPServer
+from template_mcp_server.src.middleware import (
+    InMemoryRateLimitStorage,
+    PostgreSQLRateLimitStorage,
+    RateLimitMiddleware,
+    RateLimitStorage,
+)
+from template_mcp_server.src.middleware.rate_limit import set_storage
 from template_mcp_server.src.oauth.handler import OAuth2Handler
 from template_mcp_server.src.oauth.routes import register_oauth_routes
 from template_mcp_server.src.oauth.service import OAuthService
@@ -27,6 +35,8 @@ logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 server = TemplateMCPServer()
 
 oauth_service_instance: Optional[OAuthService] = None
+
+rate_limit_storage_instance: Optional[RateLimitStorage] = None
 
 _local_development_token: Optional[str] = None
 
@@ -42,7 +52,7 @@ else:  # Default to standard HTTP (works for both "http" and "streamable-http")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Combined lifespan handler for MCP and storage initialization."""
-    global oauth_service_instance
+    global oauth_service_instance, rate_limit_storage_instance
 
     # Initialize storage service before starting
     logger.info("Initializing storage service...")
@@ -59,10 +69,53 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.critical(f"Failed to initialize storage service: {e}")
         raise
 
+    # Initialize rate limit storage
+    if settings.RATE_LIMIT_ENABLED:
+        logger.info("Initializing rate limit storage...")
+        try:
+            if (
+                settings.RATE_LIMIT_STORAGE_TYPE == "postgresql"
+                and settings.ENABLE_AUTH
+            ):
+                # Reuse PostgreSQL pool from OAuth
+                from template_mcp_server.src.oauth.service import get_storage_service
+
+                storage_service = await get_storage_service()
+                if storage_service and storage_service.pool:
+                    rate_limit_storage_instance = PostgreSQLRateLimitStorage(
+                        storage_service.pool
+                    )
+                    await rate_limit_storage_instance.initialize()
+                    logger.info("Rate limit storage: PostgreSQL")
+                else:
+                    rate_limit_storage_instance = InMemoryRateLimitStorage()
+                    logger.warning(
+                        "PostgreSQL pool not available, using in-memory storage"
+                    )
+            else:
+                rate_limit_storage_instance = InMemoryRateLimitStorage()
+                logger.info("Rate limit storage: in-memory")
+
+            # Set the global storage instance for the middleware
+            set_storage(rate_limit_storage_instance)
+            logger.info("Rate limiting middleware storage configured")
+
+            # Start cleanup task for in-memory
+            if isinstance(rate_limit_storage_instance, InMemoryRateLimitStorage):
+                asyncio.create_task(cleanup_rate_limits())
+        except Exception as e:
+            logger.error(f"Failed to initialize rate limit storage: {e}")
+            raise
+
     # Run MCP lifespan
     async with mcp_app.lifespan(app):
         logger.info("Server is ready to accept connections")
         yield
+
+    # Cleanup rate limit storage
+    if rate_limit_storage_instance:
+        logger.info("Shutting down rate limit storage...")
+        rate_limit_storage_instance = None
 
     # Cleanup storage service
     logger.info("Shutting down storage service...")
@@ -74,6 +127,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Storage service shutdown complete")
     except Exception as e:
         logger.error(f"Error during storage cleanup: {e}")
+
+
+async def cleanup_rate_limits():
+    """Background task to cleanup expired rate limit entries."""
+    while True:
+        await asyncio.sleep(settings.RATE_LIMIT_CLEANUP_INTERVAL_SECONDS)
+        if rate_limit_storage_instance:
+            try:
+                await rate_limit_storage_instance.cleanup()
+                logger.debug("Rate limit cleanup completed")
+            except Exception as e:
+                logger.error(f"Rate limit cleanup error: {e}")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -216,6 +281,12 @@ class LocalDevelopmentAuthorizationMiddleware(BaseHTTPMiddleware):
                 },
             )
 
+
+# Rate limiting middleware (register FIRST to execute early)
+# Storage is initialized in lifespan and set via set_storage()
+if settings.RATE_LIMIT_ENABLED:
+    app.add_middleware(RateLimitMiddleware)
+    logger.info("Rate limiting middleware registered")
 
 if settings.USE_EXTERNAL_BROWSER_AUTH and settings.ENABLE_AUTH:
     app.add_middleware(LocalDevelopmentAuthorizationMiddleware)
