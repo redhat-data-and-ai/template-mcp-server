@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-mcp-server
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: template-mcp-server
+          image: template-mcp-server:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+              name: http
+              protocol: TCP
+          env:
+            - name: MCP_HOST
+              value: "0.0.0.0"
+            - name: MCP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_PORT
+            - name: PYTHON_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: PYTHON_LOG_LEVEL
+            - name: MCP_TRANSPORT_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: MCP_TRANSPORT_PROTOCOL
+            - name: CORS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: CORS_ENABLED
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENVIRONMENT
+            - name: ENABLE_AUTH
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: ENABLE_AUTH
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: template-mcp-server-config
+                  key: POSTGRES_PORT
+          envFrom:
+            - secretRef:
+                name: template-mcp-server-secrets
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      restartPolicy: Always
