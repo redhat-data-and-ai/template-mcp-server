@@ -89,7 +89,11 @@ class TestSettings:
 
     def test_parse_sso_scopes(self):
         """Comma-separated scopes strip whitespace and skip empties."""
-        assert parse_sso_scopes("email, openid , profile") == ["email", "openid", "profile"]
+        assert parse_sso_scopes("email, openid , profile") == [
+            "email",
+            "openid",
+            "profile",
+        ]
         assert parse_sso_scopes("") == []
         assert parse_sso_scopes("  ,  , ") == []
 

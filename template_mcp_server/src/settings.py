@@ -298,7 +298,7 @@ class Settings(BaseSettings):
 
     @cached_property
     def oauth_scopes(self) -> list[str]:
-        """OAuth scopes derived from SSO_SCOPES (computed once per Settings instance)."""
+        """Oauth scopes derived from SSO_SCOPES (computed once per Settings instance)."""
         return parse_sso_scopes(self.SSO_SCOPES)
 
 
@@ -336,7 +336,7 @@ def validate_config(settings: Settings) -> None:
 
     if settings.ENABLE_AUTH and not parse_sso_scopes(settings.SSO_SCOPES):
         raise ValueError(
-            'SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True '
+            "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
             '(comma-separated, e.g. "email,openid,profile").'
         )
 
