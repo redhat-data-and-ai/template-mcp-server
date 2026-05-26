@@ -22,14 +22,14 @@ spec:
           image: template-mcp-server:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 5001
               name: http
               protocol: TCP
           env:
             - name: MCP_HOST
               value: "0.0.0.0"
             - name: MCP_PORT
-              value: "8080"
+              value: "5001"
             - name: PYTHON_LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
@@ -109,7 +109,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 5001
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -117,7 +117,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 5001
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3

@@ -1,7 +1,7 @@
 """Main entry point for the Template MCP Server."""
 
 import sys
-from typing import NoReturn
+from typing import Any, NoReturn
 
 import uvicorn
 
@@ -93,7 +93,7 @@ def main() -> None:
             f"Server configured to use {settings.MCP_TRANSPORT_PROTOCOL} protocol"
         )
 
-        uvicorn_config = {}
+        uvicorn_config: dict[str, Any] = {}
         if settings.MCP_SSL_KEYFILE and settings.MCP_SSL_CERTFILE:
             uvicorn_config["ssl_keyfile"] = settings.MCP_SSL_KEYFILE
             uvicorn_config["ssl_certfile"] = settings.MCP_SSL_CERTFILE

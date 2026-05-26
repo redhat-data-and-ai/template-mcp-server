@@ -35,13 +35,13 @@ class Settings(BaseSettings):
         },
     )
     MCP_PORT: int = Field(
-        default=8080,
+        default=5001,
         ge=1024,
         le=65535,
         json_schema_extra={
             "env": "MCP_PORT",
             "description": "Port number for the MCP server",
-            "example": 8080,
+            "example": 5001,
         },
     )
     MCP_SSL_KEYFILE: Optional[str] = Field(
@@ -246,11 +246,11 @@ class Settings(BaseSettings):
         },
     )
     MCP_HOST_ENDPOINT: str = Field(
-        default="http://localhost:8080",
+        default="http://localhost:5001",
         json_schema_extra={
             "env": "MCP_HOST_ENDPOINT",
             "description": "Host endpoint for the MCP server",
-            "example": "http://localhost:8080",
+            "example": "http://localhost:5001",
         },
     )
     ENVIRONMENT: str = Field(

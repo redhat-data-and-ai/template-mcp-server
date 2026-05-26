@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Test Suite
@@ -32,7 +36,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        source .venv/bin/activate && pytest --cov=template_mcp_server --cov-report=xml --cov-report=term-missing --cov-fail-under=50
+        source .venv/bin/activate && pytest --cov=template_mcp_server --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

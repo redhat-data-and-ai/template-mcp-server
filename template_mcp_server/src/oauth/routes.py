@@ -70,7 +70,7 @@ async def register_endpoint(request: Request) -> Dict[str, Any]:
         raise RuntimeError("OAuth service not initialized")
     oauth_service = get_oauth_service()
     result = await controller.handle_register(request, oauth_service)
-    return result.model_dump() if hasattr(result, "model_dump") else result
+    return result.model_dump()
 
 
 @oauth_router.post("/introspect")

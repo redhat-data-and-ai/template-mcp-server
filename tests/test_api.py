@@ -1,10 +1,10 @@
 """Tests for the API module."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 
-from template_mcp_server.src.api import app
+from template_mcp_server.src.api import app, get_host
 
 
 class TestAPI:
@@ -164,3 +164,72 @@ class TestAPI:
 
         # All should work without errors
         assert True
+
+
+class TestGetHost:
+    """Test the get_host helper function."""
+
+    @patch("template_mcp_server.src.api.settings")
+    def test_get_host_default(self, mock_settings):
+        """Test get_host returns default when MCP_HOST_ENDPOINT is not set."""
+        mock_settings.MCP_HOST_ENDPOINT = None
+        result = get_host()
+        assert result == "http://localhost:5001"
+
+    @patch("template_mcp_server.src.api.settings")
+    def test_get_host_with_valid_endpoint(self, mock_settings):
+        """Test get_host returns the configured endpoint."""
+        mock_settings.MCP_HOST_ENDPOINT = "https://my-server.example.com"
+        result = get_host()
+        assert result == "https://my-server.example.com"
+
+    @patch("template_mcp_server.src.api.settings")
+    def test_get_host_with_invalid_endpoint_falls_back(self, mock_settings):
+        """Test get_host falls back to default on invalid endpoint."""
+        mock_settings.MCP_HOST_ENDPOINT = "not-a-url"
+        result = get_host()
+        assert result == "http://localhost:5001"
+
+
+class TestRegisterEndpointRoute:
+    """Test the /auth/register route coverage."""
+
+    def test_register_endpoint_returns_model_dump(self):
+        """Test that register route calls model_dump on the result."""
+        mock_result = Mock()
+        mock_result.model_dump.return_value = {
+            "client_id": "client123",
+            "client_secret": "secret123",
+            "client_name": "Test Client",
+            "redirect_uris": ["http://localhost:3000/callback"],
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "scope": "read write",
+            "client_id_issued_at": 1234567890,
+        }
+
+        mock_oauth_service = AsyncMock()
+
+        with (
+            patch(
+                "template_mcp_server.src.oauth.routes.get_oauth_service",
+                return_value=mock_oauth_service,
+            ),
+            patch(
+                "template_mcp_server.src.oauth.controller.handle_register",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ),
+        ):
+            client = TestClient(app)
+            response = client.post(
+                "/auth/register",
+                json={
+                    "client_name": "Test Client",
+                    "redirect_uris": ["http://localhost:3000/callback"],
+                },
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["client_id"] == "client123"
+            mock_result.model_dump.assert_called_once()

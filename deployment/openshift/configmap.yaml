@@ -6,6 +6,7 @@ metadata:
     app: template-mcp-server
     component: mcp-server
 data:
+  MCP_PORT: "5001"
   PYTHON_LOG_LEVEL: "INFO"
   MCP_TRANSPORT_PROTOCOL: "http"
   CORS_ENABLED: "true"
