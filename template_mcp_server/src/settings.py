@@ -26,6 +26,15 @@ def parse_sso_scopes(sso_scopes: str) -> list[str]:
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
+def validate_sso_scopes(enable_auth: bool, sso_scopes: str) -> None:
+    """Validate SSO_SCOPES according to auth mode."""
+    if enable_auth and not parse_sso_scopes(sso_scopes):
+        raise ValueError(
+            "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
+            '(comma-separated, e.g. "email,openid,profile").'
+        )
+
+
 class Settings(BaseSettings):
     """Configuration settings for the Template MCP Server.
 
@@ -299,11 +308,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":
         """Validate SSO_SCOPES when auth is enabled."""
-        if self.ENABLE_AUTH and not parse_sso_scopes(self.SSO_SCOPES):
-            raise ValueError(
-                "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
-                '(comma-separated, e.g. "email,openid,profile").'
-            )
+        validate_sso_scopes(self.ENABLE_AUTH, self.SSO_SCOPES)
         return self
 
     @cached_property
@@ -344,11 +349,7 @@ def validate_config(settings: Settings) -> None:
             f"MCP_TRANSPORT_PROTOCOL must be one of {valid_transport_protocols}, got {settings.MCP_TRANSPORT_PROTOCOL}"
         )
 
-    if settings.ENABLE_AUTH and not parse_sso_scopes(settings.SSO_SCOPES):
-        raise ValueError(
-            "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
-            '(comma-separated, e.g. "email,openid,profile").'
-        )
+    validate_sso_scopes(settings.ENABLE_AUTH, settings.SSO_SCOPES)
 
 
 # Create config instance without validation (validation happens in main.py)
