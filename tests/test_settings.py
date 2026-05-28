@@ -4,6 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from template_mcp_server.src.settings import Settings, parse_sso_scopes, validate_config
 
@@ -118,6 +119,21 @@ class TestSettings:
         first = settings.oauth_scopes
         second = settings.oauth_scopes
         assert first is second
+
+    def test_model_validator_rejects_empty_scopes_when_auth_enabled(self):
+        """Settings init fails if auth is enabled with empty SSO_SCOPES."""
+        with patch.dict(os.environ, {"ENABLE_AUTH": "true", "SSO_SCOPES": ""}):
+            with pytest.raises(
+                ValidationError, match="SSO_SCOPES must contain at least one"
+            ):
+                Settings()
+
+    def test_model_validator_allows_empty_scopes_when_auth_disabled(self):
+        """Settings init allows empty SSO_SCOPES when auth is disabled."""
+        with patch.dict(os.environ, {"ENABLE_AUTH": "false", "SSO_SCOPES": ""}):
+            settings = Settings()
+        assert settings.ENABLE_AUTH is False
+        assert settings.oauth_scopes == []
 
 
 class TestValidateConfig:

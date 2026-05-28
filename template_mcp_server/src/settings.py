@@ -4,7 +4,7 @@ from functools import cached_property
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 from template_mcp_server.utils.pylogger import get_python_logger
@@ -295,6 +295,16 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+
+    @model_validator(mode="after")
+    def validate_oauth_scopes(self) -> "Settings":
+        """Validate SSO_SCOPES when auth is enabled."""
+        if self.ENABLE_AUTH and not parse_sso_scopes(self.SSO_SCOPES):
+            raise ValueError(
+                "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
+                '(comma-separated, e.g. "email,openid,profile").'
+            )
+        return self
 
     @cached_property
     def oauth_scopes(self) -> list[str]:
