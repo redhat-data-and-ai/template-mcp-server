@@ -1,9 +1,10 @@
 """Settings for the Template MCP Server."""
 
+from functools import cached_property
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 from template_mcp_server.utils.pylogger import get_python_logger
@@ -17,6 +18,21 @@ try:
 except Exception as e:
     # Log error but don't fail - environment variables might be set directly
     logger.warning(f"Could not load .env file: {e}")
+
+
+def parse_sso_scopes(sso_scopes: str) -> list[str]:
+    """Parse comma-separated SSO_SCOPES into a list of non-empty scope strings."""
+    raw = sso_scopes or ""
+    return [s.strip() for s in raw.split(",") if s.strip()]
+
+
+def validate_sso_scopes(enable_auth: bool, sso_scopes: str) -> None:
+    """Validate SSO_SCOPES according to auth mode."""
+    if enable_auth and not parse_sso_scopes(sso_scopes):
+        raise ValueError(
+            "SSO_SCOPES must contain at least one OAuth scope when ENABLE_AUTH is True "
+            '(comma-separated, e.g. "email,openid,profile").'
+        )
 
 
 class Settings(BaseSettings):
@@ -163,6 +179,17 @@ class Settings(BaseSettings):
             "description": "SSO token introspection endpoint URL",
         },
     )
+    SSO_SCOPES: str = Field(
+        default="email,openid,profile,session:role-any",
+        json_schema_extra={
+            "env": "SSO_SCOPES",
+            "description": (
+                "Comma-separated OAuth scopes to request (e.g. email,openid,profile for Google). "
+                "When ENABLE_AUTH is True, at least one non-empty scope is required."
+            ),
+            "example": "email,openid,profile",
+        },
+    )
     SESSION_SECRET: Optional[str] = Field(
         default=None,
         json_schema_extra={
@@ -278,6 +305,17 @@ class Settings(BaseSettings):
         },
     )
 
+    @model_validator(mode="after")
+    def validate_oauth_scopes(self) -> "Settings":
+        """Validate SSO_SCOPES when auth is enabled."""
+        validate_sso_scopes(self.ENABLE_AUTH, self.SSO_SCOPES)
+        return self
+
+    @cached_property
+    def oauth_scopes(self) -> list[str]:
+        """Oauth scopes derived from SSO_SCOPES (computed once per Settings instance)."""
+        return parse_sso_scopes(self.SSO_SCOPES)
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
@@ -310,6 +348,8 @@ def validate_config(settings: Settings) -> None:
         raise ValueError(
             f"MCP_TRANSPORT_PROTOCOL must be one of {valid_transport_protocols}, got {settings.MCP_TRANSPORT_PROTOCOL}"
         )
+
+    validate_sso_scopes(settings.ENABLE_AUTH, settings.SSO_SCOPES)
 
 
 # Create config instance without validation (validation happens in main.py)
