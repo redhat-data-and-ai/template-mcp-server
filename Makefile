@@ -115,7 +115,7 @@ deploy: ## Deploy to target (usage: make deploy openshift)
 		echo "Useful commands:"; \
 		echo "  View logs: oc logs -l app=template-mcp-server --tail=100"; \
 		echo "  Get route: oc get route template-mcp-server"; \
-		echo "  Check status: oc get pods,svc,route -l app=template-mcp-server"
+		echo "  Check status: oc get pods,svc,route -l app=template-mcp-server"; \
 	else \
 		echo "Usage: make deploy [openshift]"; \
 		echo "Available deployment targets: openshift"; \
