@@ -52,6 +52,22 @@ class TestRfc7662Introspector:
         assert "Introspection failed" in result["error"]
 
 
+class TestTokenInfoNormalizeResponse:
+    def test_passthrough_when_active_present(self):
+        data = {"active": False, "sub": "user123"}
+        assert TokenInfoIntrospector.normalize_response(data) == data
+
+    def test_maps_error_to_inactive(self):
+        data = {"error": "invalid_token", "error_description": "Token expired"}
+        result = TokenInfoIntrospector.normalize_response(data)
+        assert result == {"active": False, **data}
+
+    def test_maps_unrecognized_payload_to_inactive(self):
+        data = {"issued_to": "client@apps.googleusercontent.com"}
+        result = TokenInfoIntrospector.normalize_response(data)
+        assert result == {"active": False, **data}
+
+
 class TestTokenInfoIntrospector:
     @patch("template_mcp_server.src.oauth.introspection.httpx.get")
     def test_introspect_success(self, mock_get):
@@ -112,6 +128,21 @@ class TestTokenInfoIntrospector:
 
         assert result["active"] is False
         assert "Introspection failed" in result["error"]
+
+    @patch("template_mcp_server.src.oauth.introspection.httpx.get")
+    def test_introspect_unexpected_error(self, mock_get):
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.side_effect = ValueError("invalid json")
+        mock_get.return_value = mock_response
+
+        introspector = TokenInfoIntrospector(
+            url="https://oauth2.googleapis.com/tokeninfo",
+        )
+        result = introspector.introspect("ya29.test")
+
+        assert result["active"] is False
+        assert "Unexpected error" in result["error"]
 
 
 class TestCreateTokenIntrospector:
