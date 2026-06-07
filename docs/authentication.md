@@ -148,6 +148,7 @@ SSO_INTROSPECTION_URL=https://sso.example.com/realms/myrealm/protocol/openid-con
 | `SSO_AUTHORIZATION_URL`     | Auth enabled  | `""`    | Provider's authorization endpoint               |
 | `SSO_TOKEN_URL`             | Auth enabled  | `""`    | Provider's token endpoint                       |
 | `SSO_INTROSPECTION_URL`     | Auth enabled  | `""`    | Provider's token introspection endpoint         |
+| `SSO_INTROSPECTION_MODE`    | Auth enabled  | `rfc7662` | Introspection strategy: `rfc7662` or `tokeninfo` |
 | `SESSION_SECRET`            | Production    | `None`  | Secret key for session middleware               |
 | `COMPATIBLE_WITH_CURSOR`    | Cursor IDE    | `False` | Enables Cursor-compatible OAuth2 flow           |
 | `POSTGRES_HOST`             | Auth enabled  | `None`  | PostgreSQL host for token storage               |
@@ -180,6 +181,23 @@ USE_EXTERNAL_BROWSER_AUTH=True   # or False for production
 ```
 
 > **Security note:** `COMPATIBLE_WITH_CURSOR=True` relaxes validation. Use it only for local development with Cursor, not in production.
+
+## Google OAuth
+
+Google does **not** expose an [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662) token introspection endpoint. Use Google's tokeninfo endpoint instead:
+
+```bash
+SSO_INTROSPECTION_MODE=tokeninfo
+SSO_AUTHORIZATION_URL=https://accounts.google.com/o/oauth2/v2/auth
+SSO_TOKEN_URL=https://oauth2.googleapis.com/token
+SSO_INTROSPECTION_URL=https://oauth2.googleapis.com/tokeninfo
+SSO_SCOPES=https://www.googleapis.com/auth/userinfo.email,openid,https://www.googleapis.com/auth/userinfo.profile
+SSO_CALLBACK_URL=http://localhost:5001/auth/callback/oidc
+```
+
+Set `SSO_INTROSPECTION_MODE=tokeninfo` so the server validates tokens with `GET ?access_token=...` and normalizes the response to the RFC 7662 `{ "active": true }` shape expected by the auth middleware.
+
+> **Note:** Google's tokeninfo endpoint is intended for development and debugging. For production deployments, prefer an OIDC provider with proper introspection support (Keycloak, Auth0, Okta).
 
 ## Discovery Endpoints
 

@@ -121,11 +121,12 @@ class TestOAuth2Handler:
         assert result == mock_token
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_success(self, mock_post, mock_settings):
         """Test successful token introspection."""
         mock_settings.SSO_CLIENT_ID = "client123"
         mock_settings.SSO_CLIENT_SECRET = "secret123"
+        mock_settings.SSO_INTROSPECTION_MODE = "rfc7662"
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -147,7 +148,7 @@ class TestOAuth2Handler:
         assert result == {"active": True, "sub": "user123"}
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_http_error(self, mock_post, mock_settings):
         """Test token introspection with HTTP error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -161,7 +162,7 @@ class TestOAuth2Handler:
         assert "Introspection failed" in result["error"]
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_unexpected_error(self, mock_post, mock_settings):
         """Test token introspection with unexpected error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -270,7 +271,7 @@ class TestOAuth2HandlerIntegration:
 
     @patch("template_mcp_server.src.oauth.handler.settings")
     @patch("template_mcp_server.src.oauth.handler.OAuth2Session")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_full_oauth_flow_simulation(
         self, mock_post, mock_oauth_session, mock_settings
     ):
