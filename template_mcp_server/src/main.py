@@ -8,6 +8,10 @@ import uvicorn
 from template_mcp_server.src.api import app
 from template_mcp_server.src.settings import settings
 from template_mcp_server.src.settings import validate_config as validate_config_func
+from template_mcp_server.src.shutdown import (
+    install_signal_handlers,
+    is_shutting_down,
+)
 from template_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
 
 # Initialize logger
@@ -93,6 +97,18 @@ def main() -> None:
             f"Server configured to use {settings.MCP_TRANSPORT_PROTOCOL} protocol"
         )
 
+        # Install graceful shutdown handlers if enabled
+        if settings.ENABLE_GRACEFUL_SHUTDOWN:
+            install_signal_handlers(timeout=settings.SHUTDOWN_TIMEOUT_SECONDS)
+            logger.info(
+                "Graceful shutdown enabled",
+                timeout=settings.SHUTDOWN_TIMEOUT_SECONDS,
+            )
+        else:
+            logger.info(
+                "Graceful shutdown disabled — using default uvicorn shutdown behaviour"
+            )
+
         uvicorn_config: dict[str, Any] = {}
         if settings.MCP_SSL_KEYFILE and settings.MCP_SSL_CERTFILE:
             uvicorn_config["ssl_keyfile"] = settings.MCP_SSL_KEYFILE
@@ -112,7 +128,16 @@ def main() -> None:
         )
 
     except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt, shutting down")
+        if is_shutting_down():
+            logger.info("Shutdown complete (signal handler)")
+        else:
+            logger.info("Received keyboard interrupt, shutting down")
+    except ConnectionResetError:
+        # Suppress noisy errors that occur when connections drop during shutdown
+        if is_shutting_down():
+            logger.debug("ClosedResourceError suppressed during shutdown")
+        else:
+            raise
     except Exception as e:
         handle_startup_error(e, "server startup")
     finally:

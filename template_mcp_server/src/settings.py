@@ -317,6 +317,33 @@ class Settings(BaseSettings):
         },
     )
 
+    # Graceful Shutdown Configuration
+    ENABLE_GRACEFUL_SHUTDOWN: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_GRACEFUL_SHUTDOWN",
+            "description": (
+                "Enable graceful shutdown signal handlers for SIGINT/SIGTERM. "
+                "When True, the server performs clean resource cleanup on shutdown. "
+                "Disable only for debugging hanging shutdown issues."
+            ),
+            "example": True,
+        },
+    )
+    SHUTDOWN_TIMEOUT_SECONDS: int = Field(
+        default=30,
+        ge=5,
+        le=300,
+        json_schema_extra={
+            "env": "SHUTDOWN_TIMEOUT_SECONDS",
+            "description": (
+                "Maximum seconds to wait for graceful shutdown before forcing exit. "
+                "Applies only when ENABLE_GRACEFUL_SHUTDOWN is True."
+            ),
+            "example": 30,
+        },
+    )
+
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":
         """Validate SSO_SCOPES when auth is enabled."""
