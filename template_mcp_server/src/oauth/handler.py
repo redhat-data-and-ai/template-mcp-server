@@ -10,9 +10,9 @@ This module provides OAuth 2.0 authentication functionality including:
 import time
 from typing import Any, Dict, Optional
 
-import httpx
 from requests_oauthlib import OAuth2Session
 
+from template_mcp_server.src.oauth.introspection import create_token_introspector
 from template_mcp_server.src.settings import settings
 from template_mcp_server.utils.pylogger import get_python_logger
 
@@ -67,37 +67,18 @@ class OAuth2Handler:
 
     @staticmethod
     def introspect_token(token: str) -> Dict[str, Any]:
-        """Introspect a token using the configured SSO introspection endpoint."""
-        introspection_url = settings.SSO_INTROSPECTION_URL
-
-        try:
-            response = httpx.post(
-                introspection_url,
-                data={
-                    "token": token,
-                    "client_id": settings.SSO_CLIENT_ID,
-                    "client_secret": settings.SSO_CLIENT_SECRET,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=10.0,
-            )
-            response.raise_for_status()
-
-            introspection_data = response.json()
-            logger.debug(f"Token introspection response: {introspection_data}")
-
-            return introspection_data
-
-        except httpx.HTTPError as e:
-            logger.error(f"Token introspection failed: {e}")
-            return {"active": False, "error": f"Introspection failed: {e}"}
-        except Exception as e:
-            logger.error(f"Unexpected error during token introspection: {e}")
-            return {"active": False, "error": f"Unexpected error: {e}"}
+        """Introspect a token using the configured SSO introspection strategy."""
+        introspector = create_token_introspector(
+            settings.SSO_INTROSPECTION_MODE,
+            settings.SSO_INTROSPECTION_URL,
+            settings.SSO_CLIENT_ID,
+            settings.SSO_CLIENT_SECRET,
+        )
+        return introspector.introspect(token)
 
     @staticmethod
     def verify_access_token(token: str) -> Optional[Dict[str, Any]]:
-        """Verify an access token using RedHat's introspection endpoint."""
+        """Verify an access token via the configured SSO introspection endpoint."""
         introspection_result = OAuth2Handler.introspect_token(token)
 
         if not introspection_result.get("active", False):
@@ -106,7 +87,7 @@ class OAuth2Handler:
 
         # Check if token is expired
         exp = introspection_result.get("exp")
-        if exp and exp < time.time():
+        if exp is not None and int(exp) < time.time():
             logger.warning("Token has expired")
             return None
 
@@ -120,7 +101,7 @@ class OAuth2Handler:
 
     @staticmethod
     def verify_authorization_header(auth_header: str) -> Optional[Dict[str, Any]]:
-        """Verify Authorization header with Bearer token using RedHat's introspection."""
+        """Verify Authorization header with Bearer token via SSO introspection."""
         if not auth_header or not auth_header.startswith("Bearer "):
             logger.warning("Invalid authorization header format")
             return None

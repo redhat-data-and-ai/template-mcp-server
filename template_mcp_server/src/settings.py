@@ -1,7 +1,7 @@
 """Settings for the Template MCP Server."""
 
 from functools import cached_property
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from dotenv import load_dotenv
 from pydantic import Field, model_validator
@@ -177,6 +177,18 @@ class Settings(BaseSettings):
         json_schema_extra={
             "env": "SSO_INTROSPECTION_URL",
             "description": "SSO token introspection endpoint URL",
+        },
+    )
+    SSO_INTROSPECTION_MODE: Literal["rfc7662", "tokeninfo"] = Field(
+        default="rfc7662",
+        json_schema_extra={
+            "env": "SSO_INTROSPECTION_MODE",
+            "description": (
+                "Token validation strategy: rfc7662 (POST introspection) or "
+                "tokeninfo (GET access_token query param for providers like Google)"
+            ),
+            "example": "rfc7662",
+            "enum": ["rfc7662", "tokeninfo"],
         },
     )
     SSO_SCOPES: str = Field(
