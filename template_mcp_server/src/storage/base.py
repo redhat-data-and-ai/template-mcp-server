@@ -1,3 +1,5 @@
+"""Abstract base class defining the storage interface for the Template MCP Server."""
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 

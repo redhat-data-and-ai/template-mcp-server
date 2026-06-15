@@ -141,3 +141,255 @@ class TestRedisStorageServiceMethods:
 
         assert result == client_data
         assert service.redis.get.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_client_by_name_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.get_client_by_name_and_redirect_uris("Test", ["url"])
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_client_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.get_client("nonexistent")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_store_client_no_redis(self):
+        service = RedisStorageService()
+        result = await service.store_client({"id": "1", "name": "x", "redirect_uris": []})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_client_no_redis(self):
+        service = RedisStorageService()
+        result = await service.get_client("id")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_client_by_name_no_redis(self):
+        service = RedisStorageService()
+        result = await service.get_client_by_name_and_redirect_uris("x", [])
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_store_client_exception(self, service):
+        service.redis.set.side_effect = Exception("fail")
+        result = await service.store_client({"id": "1", "name": "x", "redirect_uris": []})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_client_exception(self, service):
+        service.redis.get.side_effect = Exception("fail")
+        result = await service.get_client("id")
+        assert result is None
+
+    # --- Authorization code ---
+    @pytest.mark.asyncio
+    async def test_get_authorization_code(self, service):
+        data = {"client_id": "c1", "expires_at": time.time() + 600}
+        service.redis.get.return_value = json.dumps(data)
+        result = await service.get_authorization_code("code1")
+        assert result == data
+
+    @pytest.mark.asyncio
+    async def test_get_authorization_code_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.get_authorization_code("x")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_authorization_code_no_redis(self):
+        service = RedisStorageService()
+        result = await service.get_authorization_code("code1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_store_authorization_code_no_redis(self):
+        service = RedisStorageService()
+        result = await service.store_authorization_code("c", {"expires_at": time.time() + 60})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_authorization_code(self, service):
+        service.redis.delete.return_value = 1
+        result = await service.delete_authorization_code("code1")
+        assert result is True
+        service.redis.delete.assert_called_once_with("auth_code:code1")
+
+    @pytest.mark.asyncio
+    async def test_delete_authorization_code_not_found(self, service):
+        service.redis.delete.return_value = 0
+        result = await service.delete_authorization_code("code1")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_authorization_code_no_redis(self):
+        service = RedisStorageService()
+        result = await service.delete_authorization_code("code1")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_update_authorization_code_token_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.update_authorization_code_token("code1", {})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_update_authorization_code_token_no_ttl(self, service):
+        data = {"client_id": "c1"}
+        service.redis.get.return_value = json.dumps(data)
+        service.redis.ttl.return_value = -1
+        result = await service.update_authorization_code_token("code1", {"token": "t"})
+        assert result is True
+        service.redis.set.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_authorization_code_no_redis(self):
+        service = RedisStorageService()
+        result = await service.update_authorization_code_token("code1", {})
+        assert result is False
+
+    # --- Access tokens ---
+    @pytest.mark.asyncio
+    async def test_store_access_token(self, service):
+        data = {"client_id": "c1", "expires_at": time.time() + 3600}
+        result = await service.store_access_token("tok1", data)
+        assert result is True
+        service.redis.setex.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_store_access_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.store_access_token("tok", {"expires_at": time.time() + 100})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_access_token(self, service):
+        data = {"client_id": "c1", "scope": "read"}
+        service.redis.get.return_value = json.dumps(data)
+        result = await service.get_access_token("tok1")
+        assert result == data
+
+    @pytest.mark.asyncio
+    async def test_get_access_token_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.get_access_token("tok1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_access_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.get_access_token("tok1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_delete_access_token(self, service):
+        service.redis.delete.return_value = 1
+        result = await service.delete_access_token("tok1")
+        assert result is True
+        service.redis.delete.assert_called_once_with("access_token:tok1")
+
+    @pytest.mark.asyncio
+    async def test_delete_access_token_not_found(self, service):
+        service.redis.delete.return_value = 0
+        result = await service.delete_access_token("tok1")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_access_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.delete_access_token("tok1")
+        assert result is False
+
+    # --- Refresh tokens ---
+    @pytest.mark.asyncio
+    async def test_store_refresh_token(self, service):
+        data = {"client_id": "c1", "expires_at": time.time() + 7200}
+        result = await service.store_refresh_token("ref1", data)
+        assert result is True
+        service.redis.setex.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_store_refresh_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.store_refresh_token("ref", {"expires_at": time.time() + 100})
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token(self, service):
+        data = {"client_id": "c1", "scope": "read"}
+        service.redis.get.return_value = json.dumps(data)
+        result = await service.get_refresh_token("ref1")
+        assert result == data
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token_not_found(self, service):
+        service.redis.get.return_value = None
+        result = await service.get_refresh_token("ref1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.get_refresh_token("ref1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_delete_refresh_token(self, service):
+        service.redis.delete.return_value = 1
+        result = await service.delete_refresh_token("ref1")
+        assert result is True
+        service.redis.delete.assert_called_once_with("refresh_token:ref1")
+
+    @pytest.mark.asyncio
+    async def test_delete_refresh_token_not_found(self, service):
+        service.redis.delete.return_value = 0
+        result = await service.delete_refresh_token("ref1")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_delete_refresh_token_no_redis(self):
+        service = RedisStorageService()
+        result = await service.delete_refresh_token("ref1")
+        assert result is False
+
+    # --- Health and Status ---
+    @pytest.mark.asyncio
+    async def test_is_healthy_true(self, service):
+        result = await service.is_healthy()
+        assert result is True
+        service.redis.ping.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_is_healthy_no_redis(self):
+        service = RedisStorageService()
+        result = await service.is_healthy()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_is_healthy_exception(self, service):
+        service.redis.ping.side_effect = Exception("ping failed")
+        result = await service.is_healthy()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_status_healthy(self, service):
+        result = await service.get_status()
+        assert result["type"] == "redis"
+        assert result["healthy"] is True
+        assert result["host"] == "localhost"
+        assert result["port"] == 6379
+
+    @pytest.mark.asyncio
+    async def test_get_status_unhealthy(self):
+        service = RedisStorageService()
+        result = await service.get_status()
+        assert result["type"] == "redis"
+        assert result["healthy"] is False
+
+    @pytest.mark.asyncio
+    async def test_disconnect_no_redis(self):
+        service = RedisStorageService()
+        await service.disconnect()  # Should not raise
+
