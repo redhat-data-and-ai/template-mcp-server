@@ -16,13 +16,15 @@ import time
 from typing import Any, Dict, List, Optional
 
 from template_mcp_server.src.settings import settings
+from template_mcp_server.src.storage.base import BaseStorageService
+from template_mcp_server.src.storage.redis_service import RedisStorageService
 from template_mcp_server.src.storage.storage_service import StorageService
 from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
 # Global storage service for backward compatibility during transition
-_storage_service: Optional[StorageService] = None
+_storage_service: Optional[BaseStorageService] = None
 
 
 def generate_random_string(length: int = 32) -> str:
@@ -66,7 +68,7 @@ def verify_code_challenge(code_verifier: str, code_challenge: str) -> bool:
 class OAuthService:
     """OAuth service that manages OAuth 2.0 operations with dependency injection."""
 
-    def __init__(self, storage_service: StorageService):
+    def __init__(self, storage_service: BaseStorageService):
         """Initialize OAuth service with storage dependency.
 
         Args:
@@ -239,13 +241,13 @@ class OAuthService:
 
 
 # Backward compatibility functions - will be deprecated in future versions
-async def get_storage_service() -> StorageService:
+async def get_storage_service() -> BaseStorageService:
     """Get the initialized storage service.
 
     Note: Storage service must be initialized via initialize_storage() during startup.
 
     Returns:
-        StorageService: The initialized storage service
+        BaseStorageService: The initialized storage service
 
     Raises:
         RuntimeError: If storage service hasn't been initialized
@@ -380,15 +382,15 @@ async def get_storage_status() -> Dict[str, Any]:
     return await service.get_storage_status()
 
 
-async def initialize_storage() -> StorageService:
+async def initialize_storage() -> BaseStorageService:
     """Initialize the storage service. Call this during application startup.
 
     Returns:
-        StorageService: The initialized storage service
+        BaseStorageService: The initialized storage service
 
     Raises:
-        ValueError: If PostgreSQL configuration is missing
-        ConnectionError: If PostgreSQL connection fails
+        ValueError: If configuration is missing
+        ConnectionError: If connection fails
     """
     global _storage_service
 
@@ -396,46 +398,58 @@ async def initialize_storage() -> StorageService:
         logger.warning("Storage service already initialized")
         return _storage_service
 
-    logger.info("Initializing PostgreSQL storage service")
+    if settings.STORAGE_TYPE == "redis":
+        logger.info("Initializing Redis storage service")
+        _storage_service = RedisStorageService(
+            host=settings.REDIS_HOST or "localhost",
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+            db=settings.REDIS_DB,
+        )
+    else:
+        logger.info("Initializing PostgreSQL storage service")
 
-    # Validate required configuration
-    if not all(
-        [
-            settings.POSTGRES_HOST,
-            settings.POSTGRES_PORT,
-            settings.POSTGRES_DB,
-            settings.POSTGRES_USER,
-        ]
-    ):
-        missing = [
-            name
-            for name, value in [
-                ("POSTGRES_HOST", settings.POSTGRES_HOST),
-                ("POSTGRES_PORT", settings.POSTGRES_PORT),
-                ("POSTGRES_DB", settings.POSTGRES_DB),
-                ("POSTGRES_USER", settings.POSTGRES_USER),
+        # Validate required configuration
+        if not all(
+            [
+                settings.POSTGRES_HOST,
+                settings.POSTGRES_PORT,
+                settings.POSTGRES_DB,
+                settings.POSTGRES_USER,
             ]
-            if not value
-        ]
-        raise ValueError(
-            f"Missing required PostgreSQL configuration: {', '.join(missing)}"
+        ):
+            missing = [
+                name
+                for name, value in [
+                    ("POSTGRES_HOST", settings.POSTGRES_HOST),
+                    ("POSTGRES_PORT", settings.POSTGRES_PORT),
+                    ("POSTGRES_DB", settings.POSTGRES_DB),
+                    ("POSTGRES_USER", settings.POSTGRES_USER),
+                ]
+                if not value
+            ]
+            raise ValueError(
+                f"Missing required PostgreSQL configuration: {', '.join(missing)}"
+            )
+
+        # Create and connect storage service
+        # Type assertions are safe here because we validated required fields above
+        _storage_service = StorageService(
+            host=str(settings.POSTGRES_HOST),
+            port=int(settings.POSTGRES_PORT)
+            if settings.POSTGRES_PORT is not None
+            else 5432,
+            database=str(settings.POSTGRES_DB),
+            username=str(settings.POSTGRES_USER),
+            password=settings.POSTGRES_PASSWORD or "",
+            pool_size=settings.POSTGRES_POOL_SIZE,
+            max_connections=settings.POSTGRES_MAX_CONNECTIONS,
         )
 
-    # Create and connect storage service
-    # Type assertions are safe here because we validated required fields above
-    _storage_service = StorageService(
-        host=str(settings.POSTGRES_HOST),
-        port=int(settings.POSTGRES_PORT)
-        if settings.POSTGRES_PORT is not None
-        else 5432,
-        database=str(settings.POSTGRES_DB),
-        username=str(settings.POSTGRES_USER),
-        password=settings.POSTGRES_PASSWORD or "",
-        pool_size=settings.POSTGRES_POOL_SIZE,
-        max_connections=settings.POSTGRES_MAX_CONNECTIONS,
-    )
     await _storage_service.connect()
-    logger.info("PostgreSQL storage service initialized successfully")
+    logger.info(
+        f"{settings.STORAGE_TYPE.capitalize()} storage service initialized successfully"
+    )
 
     return _storage_service
 
@@ -444,7 +458,7 @@ async def cleanup_storage() -> None:
     """Cleanup storage service. Call this during application shutdown."""
     global _storage_service
     if _storage_service is not None:
-        logger.info("Disconnecting from PostgreSQL...")
+        logger.info("Disconnecting from storage...")
         await _storage_service.disconnect()
         _storage_service = None
         logger.info("Storage service cleanup complete")

@@ -33,4 +33,4 @@ class TestStorageInit:
         from template_mcp_server.src import storage
 
         assert storage.__doc__ is not None
-        assert "PostgreSQL storage service" in storage.__doc__
+        assert "Storage services" in storage.__doc__

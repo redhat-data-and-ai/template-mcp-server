@@ -220,6 +220,54 @@ class Settings(BaseSettings):
         },
     )
 
+    # Storage Configuration
+    STORAGE_TYPE: Literal["postgres", "redis"] = Field(
+        default="postgres",
+        json_schema_extra={
+            "env": "STORAGE_TYPE",
+            "description": "Storage backend type: postgres or redis",
+            "example": "postgres",
+            "enum": ["postgres", "redis"],
+        },
+    )
+
+    # Redis Configuration
+    REDIS_HOST: Optional[str] = Field(
+        default="localhost",
+        json_schema_extra={
+            "env": "REDIS_HOST",
+            "description": "Redis host address",
+            "example": "localhost",
+        },
+    )
+    REDIS_PORT: int = Field(
+        default=6379,
+        ge=1024,
+        le=65535,
+        json_schema_extra={
+            "env": "REDIS_PORT",
+            "description": "Redis port number",
+            "example": 6379,
+        },
+    )
+    REDIS_PASSWORD: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "REDIS_PASSWORD",
+            "description": "Redis password",
+            "example": "secretpassword",
+            "sensitive": True,
+        },
+    )
+    REDIS_DB: int = Field(
+        default=0,
+        json_schema_extra={
+            "env": "REDIS_DB",
+            "description": "Redis database index",
+            "example": 0,
+        },
+    )
+
     # PostgreSQL Configuration
     POSTGRES_HOST: Optional[str] = Field(
         default=None,

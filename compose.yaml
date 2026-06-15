@@ -20,6 +20,23 @@ services:
     networks:
       - template-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: template-mcp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - template-network
+
   template-mcp-server:
     build:
       context: .
@@ -37,8 +54,14 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - STORAGE_TYPE=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: always
     healthcheck:
@@ -51,6 +74,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

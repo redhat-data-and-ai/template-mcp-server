@@ -6,12 +6,13 @@ from typing import Any, Dict, List, Optional
 
 import asyncpg
 
+from template_mcp_server.src.storage.base import BaseStorageService
 from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
 
-class StorageService:
+class StorageService(BaseStorageService):
     """PostgreSQL storage service for persistent data storage.
 
     This service provides direct PostgreSQL storage functionality without
