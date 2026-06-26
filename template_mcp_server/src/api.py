@@ -218,10 +218,12 @@ def _get_session_secret() -> str:
     import secrets
 
     ephemeral_key = secrets.token_urlsafe(32)
-    logger.warning(
-        "Using auto-generated ephemeral session secret for development. "
-        "Set SESSION_SECRET environment variable for production use."
-    )
+    # Only log in debug mode to reduce noise during local development
+    if settings.PYTHON_LOG_LEVEL == "DEBUG":
+        logger.warning(
+            "Using auto-generated ephemeral session secret for development. "
+            "Set SESSION_SECRET environment variable for production use."
+        )
     return ephemeral_key
 
 

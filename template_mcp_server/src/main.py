@@ -1,6 +1,7 @@
 """Main entry point for the Template MCP Server."""
 
 import sys
+import warnings
 from typing import Any, NoReturn
 
 import uvicorn
@@ -9,6 +10,24 @@ from template_mcp_server.src.api import app
 from template_mcp_server.src.settings import settings
 from template_mcp_server.src.settings import validate_config as validate_config_func
 from template_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
+
+# Configure warning filters before importing dependencies
+# Suppress known deprecation warnings from third-party libraries
+warnings.filterwarnings(
+    "ignore",
+    message="authlib.jose module is deprecated",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="websockets.legacy is deprecated",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="websockets.server.WebSocketServerProtocol is deprecated",
+    category=DeprecationWarning,
+)
 
 # Initialize logger
 logger = get_python_logger()

@@ -24,6 +24,7 @@ USER default
 # --------------------------------------------------------------------------------------------------
 
 COPY template_mcp_server /app/template_mcp_server
+COPY run_server.py /app/run_server.py
 
 # --------------------------------------------------------------------------------------------------
 # Set PYTHONPATH to include /app
@@ -31,10 +32,16 @@ COPY template_mcp_server /app/template_mcp_server
 
 ENV PYTHONPATH=/app
 
+# --------------------------------------------------------------------------------------------------
+# Suppress known third-party deprecation warnings
+# --------------------------------------------------------------------------------------------------
+
+ENV PYTHONWARNINGS="ignore::DeprecationWarning:fastmcp.server.auth.providers.jwt,ignore::DeprecationWarning:websockets.legacy,ignore::DeprecationWarning:uvicorn.protocols.websockets.websockets_impl"
+
 EXPOSE 5001
 
 # --------------------------------------------------------------------------------------------------
 # add entrypoint for the container
 # --------------------------------------------------------------------------------------------------
 
-CMD ["/app/.venv/bin/python", "-m", "template_mcp_server.src.main"]
+CMD ["/app/.venv/bin/python", "/app/run_server.py"]
