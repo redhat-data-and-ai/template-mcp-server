@@ -24,7 +24,6 @@ USER default
 # --------------------------------------------------------------------------------------------------
 
 COPY template_mcp_server /app/template_mcp_server
-COPY run_server.py /app/run_server.py
 
 # --------------------------------------------------------------------------------------------------
 # Set PYTHONPATH to include /app
@@ -44,4 +43,4 @@ EXPOSE 5001
 # add entrypoint for the container
 # --------------------------------------------------------------------------------------------------
 
-CMD ["/app/.venv/bin/python", "/app/run_server.py"]
+CMD ["/app/.venv/bin/python", "-m", "template_mcp_server.src.main"]

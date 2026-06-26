@@ -107,7 +107,7 @@ local: ## Start PostgreSQL and MCP server locally
 	@echo "Press Ctrl+C to stop the server (PostgreSQL will keep running)"
 	@echo "To stop PostgreSQL: podman stop template-mcp-postgres"
 	@echo ""
-	@. .venv/bin/activate && python run_server.py
+	@. .venv/bin/activate && template-mcp-server
 
 container: ## Build and run with podman-compose
 	export PODMAN_COMPOSE_SILENT=true
