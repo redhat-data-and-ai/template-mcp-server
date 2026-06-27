@@ -1,4 +1,4 @@
-.PHONY: help install clean test lint format coverage pre-commit local container deploy undeploy deps
+.PHONY: help install clean test lint format coverage pre-commit local local-down container container-down deploy undeploy deps
 
 # OpenShift namespace (can be overridden: make deploy openshift NAMESPACE=my-project)
 NAMESPACE ?= $(shell oc project -q 2>/dev/null)
@@ -106,12 +106,18 @@ local: ## Start PostgreSQL and MCP server locally
 	@echo ""
 	@echo "Press Ctrl+C to stop the server (PostgreSQL will keep running)"
 	@echo "To stop PostgreSQL: podman stop template-mcp-postgres"
+	@echo "MCP available at: http://localhost:5001"
 	@echo ""
-	@. .venv/bin/activate && template-mcp-server
+	@POSTGRES_HOST=localhost POSTGRES_PORT=5433 . .venv/bin/activate && template-mcp-server
 
-container: ## Build and run with podman-compose
-	export PODMAN_COMPOSE_SILENT=true
-	podman-compose --no-ansi up --build --force-recreate --remove-orphans  --timeout=60
+local-down:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml stop postgres
+
+container:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml --no-ansi up --build --force-recreate --remove-orphans --timeout=60
+
+container-down:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml down
 
 deploy: ## Deploy to target (usage: make deploy openshift)
 	@if [ "$(filter openshift,$(MAKECMDGOALS))" = "openshift" ]; then \
