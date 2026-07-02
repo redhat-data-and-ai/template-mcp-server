@@ -1,4 +1,4 @@
-.PHONY: help install clean test lint format coverage pre-commit local container deploy undeploy deps
+.PHONY: help install clean test lint format coverage pre-commit local local-down container container-down deploy undeploy deps
 
 # OpenShift namespace (can be overridden: make deploy openshift NAMESPACE=my-project)
 NAMESPACE ?= $(shell oc project -q 2>/dev/null)
@@ -14,7 +14,7 @@ help: ## Show this help message
 deps: ## Check required CLI tools (uv, podman, oc)
 	@which uv > /dev/null && echo "uv: $(shell uv --version)" || (echo "Error: uv not found. Please install uv." && exit 1)
 	@which podman > /dev/null && echo "podman: $(shell podman --version)" || (echo "Error: podman not found. Please install podman." && exit 1)
-	@podman compose version > /dev/null 2>&1 && echo "podman compose: $(shell podman compose version)" || (echo "Error: podman compose not found. Please install podman compose." && exit 1)
+	@podman-compose version > /dev/null 2>&1 && echo "podman-compose: $(shell podman-compose version)" || (echo "Error: podman-compose not found. Please install podman-compose." && exit 1)
 	@which oc > /dev/null && echo "oc: $(shell oc version --client)" || (echo "Error: oc not found. Please install oc." && exit 1)
 
 install: ## Install dependencies, pre-commit hooks, and activate venv
@@ -33,8 +33,12 @@ install: ## Install dependencies, pre-commit hooks, and activate venv
 	@chmod +x /tmp/activate_and_shell.sh
 	@exec /tmp/activate_and_shell.sh
 
-clean: ## Remove caches, venv, and build artifacts
-	rm -rf .mypy_cache .ruff_cache .venv __pycache__ activate_and_shell.sh
+clean: ## Remove caches, venv, build artifacts, and containers/images
+	@echo "Stopping and removing containers..."
+	@podman-compose down -v --rmi all 2>/dev/null || true
+	@echo "Removing Python caches and virtual environment..."
+	@rm -rf .mypy_cache .ruff_cache .venv __pycache__ activate_and_shell.sh
+	@echo "✓ Cleanup complete"
 
 test: ## Run test suite
 	@if [ ! -d ".venv" ]; then \
@@ -73,17 +77,47 @@ pre-commit: ## Run all pre-commit hooks
 	fi
 	. .venv/bin/activate && pre-commit run --all-files
 
-local: ## Start MCP server locally
+local: ## Start PostgreSQL and MCP server locally
 	@echo "Setting up local environment..."
 	@test -f .env || (echo "Creating .env from .env.example..." && cp .env.example .env)
-	@echo "Starting MCP server locally on port 5001..."
-	@echo "Health check available at: http://localhost:5001/health"
-	@echo "Press Ctrl+C to stop the server"
-	@. .venv/bin/activate && python -m template_mcp_server.src.main
+	@echo ""
+	@echo "Checking PostgreSQL status..."
+	@if podman ps --filter "name=template-mcp-postgres" --format "{{.Names}}" 2>/dev/null | grep -q "template-mcp-postgres"; then \
+		echo "✓ PostgreSQL container already running"; \
+	else \
+		echo "Starting PostgreSQL database..."; \
+		podman-compose up -d postgres || { \
+			echo ""; \
+			echo "✗ Failed to start PostgreSQL. Common issues:"; \
+			echo "  - Port 5433 already in use (check: lsof -i :5433)"; \
+			echo "  - Container already exists (check: podman ps -a)"; \
+			echo ""; \
+			echo "To fix:"; \
+			echo "  - Stop existing postgres: podman stop template-mcp-postgres"; \
+			echo "  - Remove existing container: podman rm template-mcp-postgres"; \
+			echo "  - Or check what's using port 5433: lsof -i :5433"; \
+			exit 1; \
+		}; \
+	fi
+	@echo "Waiting for PostgreSQL to be ready..."
+	@sleep 3
+	@podman exec template-mcp-postgres pg_isready -U postgres > /dev/null 2>&1 || (echo "Waiting a bit more..."; sleep 5)
+	@podman exec template-mcp-postgres pg_isready -U postgres > /dev/null 2>&1 && echo "✓ PostgreSQL is ready!" || (echo "✗ PostgreSQL not responding. Check logs with: podman logs template-mcp-postgres"; exit 1)
+	@echo ""
+	@echo "Press Ctrl+C to stop the server (PostgreSQL will keep running)"
+	@echo "To stop PostgreSQL: podman stop template-mcp-postgres"
+	@echo "MCP available at: http://localhost:5001"
+	@echo ""
+	@POSTGRES_HOST=localhost POSTGRES_PORT=5433 . .venv/bin/activate && template-mcp-server
 
-container: ## Build and run with podman compose
-	export PODMAN_COMPOSE_SILENT=true
-	podman compose --no-ansi up --build --force-recreate --remove-orphans  --timeout=60
+local-down:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml stop postgres
+
+container:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml --no-ansi up --build --force-recreate --remove-orphans --timeout=60
+
+container-down:
+	@export PODMAN_COMPOSE_SILENT=true && podman-compose -f compose.yaml down
 
 deploy: ## Deploy to target (usage: make deploy openshift)
 	@if [ "$(filter openshift,$(MAKECMDGOALS))" = "openshift" ]; then \

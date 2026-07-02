@@ -31,6 +31,12 @@ COPY template_mcp_server /app/template_mcp_server
 
 ENV PYTHONPATH=/app
 
+# --------------------------------------------------------------------------------------------------
+# Suppress known third-party deprecation warnings
+# --------------------------------------------------------------------------------------------------
+
+ENV PYTHONWARNINGS="ignore::DeprecationWarning:fastmcp.server.auth.providers.jwt,ignore::DeprecationWarning:websockets.legacy,ignore::DeprecationWarning:uvicorn.protocols.websockets.websockets_impl"
+
 EXPOSE 5001
 
 # --------------------------------------------------------------------------------------------------
