@@ -86,6 +86,7 @@ The server configuration is managed through environment variables:
 | `COMPATIBLE_WITH_CURSOR`    | `False`                 | Cursor IDE OAuth2 compatibility mode                                      |
 | `CORS_ENABLED`              | `False`                 | Enable CORS middleware                                                    |
 | `CORS_ORIGINS`              | `["*"]`                 | Allowed CORS origins                                                      |
+| `ENABLE_MCP_CONNECTION_FILTER` | `True`               | Downgrade expected MCP connection errors (`client disconnected`, `connection reset`, `broken pipe`) from ERROR to DEBUG |
 
 *\* `ENABLE_AUTH` defaults to `True` in code but `False` in `.env.example`. Always copy `.env.example` to `.env`.*
 

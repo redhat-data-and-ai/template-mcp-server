@@ -316,6 +316,14 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+    ENABLE_MCP_CONNECTION_FILTER: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_MCP_CONNECTION_FILTER",
+            "description": "Filter expected MCP connection errors (client disconnect, connection reset, broken pipe) from ERROR logs",
+            "example": True,
+        },
+    )
 
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":
