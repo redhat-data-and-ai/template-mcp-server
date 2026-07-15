@@ -4,6 +4,7 @@ It initializes the FastAPI app, configures CORS middleware, and sets up
 the MCP server with appropriate transport protocols.
 """
 
+import json
 import webbrowser
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Callable, Optional
@@ -32,6 +33,24 @@ server = TemplateMCPServer()
 oauth_service_instance: Optional[OAuthService] = None
 
 _local_development_token: Optional[str] = None
+
+PUBLIC_PATHS = frozenset(
+    {
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-authorization-server",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/auth/authorize",
+        "/auth/token",
+        "/auth/revoke",
+        "/auth/introspect",
+        "/auth/register",
+        "/auth/callback",
+        "/auth/callback/oidc",
+        "/health",
+    }
+)
 
 # Choose the appropriate transport protocol based on settings
 if settings.MCP_TRANSPORT_PROTOCOL == "sse":
@@ -92,24 +111,7 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
         if not settings.ENABLE_AUTH:
             return await call_next(request)
 
-        public_paths = {
-            "/.well-known/oauth-protected-resource",
-            "/.well-known/oauth-authorization-server",
-            "/docs",
-            "/redoc",
-            "/openapi.json",
-            "/auth/authorize",
-            "/auth/token",
-            "/auth/revoke",
-            "/auth/introspect",
-            "/auth/register",
-            "/auth/callback",
-            "/auth/callback/snowflake",
-            "/auth/callback/oidc",
-            "/health",
-        }
-
-        if request.url.path in public_paths:
+        if request.url.path in PUBLIC_PATHS:
             return await call_next(request)
 
         auth_header = request.headers.get("authorization")
@@ -144,30 +146,11 @@ class LocalDevelopmentAuthorizationMiddleware(BaseHTTPMiddleware):
         if not settings.USE_EXTERNAL_BROWSER_AUTH:
             return await call_next(request)
 
-        public_paths = {
-            "/.well-known/oauth-protected-resource",
-            "/.well-known/oauth-authorization-server",
-            "/docs",
-            "/redoc",
-            "/openapi.json",
-            "/auth/authorize",
-            "/auth/token",
-            "/auth/revoke",
-            "/auth/introspect",
-            "/auth/register",
-            "/auth/callback",
-            "/auth/callback/snowflake",
-            "/auth/callback/oidc",
-            "/health",
-        }
-
-        if request.url.path in public_paths:
+        if request.url.path in PUBLIC_PATHS:
             return await call_next(request)
         if request.method == "POST" and request.url.path in {"/mcp", "/mcp/"}:
             try:
                 body_bytes = await request.body()
-                import json
-
                 body = json.loads(body_bytes)
                 # Only enforce auth on tools/call — allow tools/list so agents can discover tools without a token.
                 if body.get("method") == "tools/call":
@@ -191,8 +174,6 @@ class LocalDevelopmentAuthorizationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            from template_mcp_server.src.oauth.handler import OAuth2Handler
-
             authorization_url, state = OAuth2Handler.get_authorization_url()
 
             logger.info(
@@ -242,10 +223,12 @@ def _get_session_secret() -> str:
     import secrets
 
     ephemeral_key = secrets.token_urlsafe(32)
-    logger.warning(
-        "Using auto-generated ephemeral session secret for development. "
-        "Set SESSION_SECRET environment variable for production use."
-    )
+    # Only log in debug mode to reduce noise during local development
+    if settings.PYTHON_LOG_LEVEL == "DEBUG":
+        logger.warning(
+            "Using auto-generated ephemeral session secret for development. "
+            "Set SESSION_SECRET environment variable for production use."
+        )
     return ephemeral_key
 
 
@@ -310,7 +293,7 @@ async def well_known_oauth_protected_resource():
     return {
         "resource": host,
         "authorization_servers": [host],
-        "scopes_supported": ["snowflake-mcp-server"],
+        "scopes_supported": ["template-mcp-server"],
         "registration_endpoint": f"{host}/auth/register",
         "bearer_methods_supported": ["header"],
         "revocation_endpoint": f"{host}/auth/revoke",
@@ -335,7 +318,7 @@ async def well_known_oauth_authorization_server():
         "authorization_endpoint": f"{host}/auth/authorize",
         "token_endpoint": f"{host}/auth/token",
         "registration_endpoint": f"{host}/auth/register",
-        "scopes_supported": ["dataverse-console"],
+        "scopes_supported": ["template-mcp-server"],
         "response_types_supported": ["code"],
         "response_modes_supported": ["query"],
         "grant_types_supported": [
