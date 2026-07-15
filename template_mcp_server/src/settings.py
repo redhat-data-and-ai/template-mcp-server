@@ -316,6 +316,14 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+    ENABLE_JINJA2_SECURITY: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_JINJA2_SECURITY",
+            "description": "Enable Jinja2 template injection protections (delimiter escaping, input validation, autoescape)",
+            "example": True,
+        },
+    )
 
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":

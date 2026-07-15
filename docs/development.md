@@ -86,10 +86,32 @@ The server configuration is managed through environment variables:
 | `COMPATIBLE_WITH_CURSOR`    | `False`                 | Cursor IDE OAuth2 compatibility mode                                      |
 | `CORS_ENABLED`              | `False`                 | Enable CORS middleware                                                    |
 | `CORS_ORIGINS`              | `["*"]`                 | Allowed CORS origins                                                      |
+| `ENABLE_JINJA2_SECURITY`    | `True`                  | Escape/validate Jinja2 delimiters in user input and enforce `autoescape` on template environments |
 
 *\* `ENABLE_AUTH` defaults to `True` in code but `False` in `.env.example`. Always copy `.env.example` to `.env`.*
 
 See the [Authentication Guide](authentication.md) for the full list of `SSO_*` and `POSTGRES_*` variables.
+
+## Jinja2 Security
+
+The utilities in `template_mcp_server.utils.jinja2_security` provide defense-in-depth
+for future Jinja2 usage. They help prevent accidental template injection when
+handling untrusted input, but they do **not** make it safe to construct Jinja2
+template source from user-controlled data.
+
+When a tool renders Jinja2 templates with user-supplied input:
+
+1. **`validate_user_query_for_jinja2()`** — reject untrusted input before rendering.
+2. **`escape_jinja2_delimiters()`** — supplementary control when input must be embedded.
+3. **`get_secure_jinja2_env()`** — create environments with `autoescape` enabled.
+
+Validation should happen before rendering. Escaping alone is not a complete SSTI
+defense. Applications should avoid building templates from user input.
+
+Set `ENABLE_JINJA2_SECURITY=False` only when debugging template issues with
+**fully trusted** input. Disabling it removes delimiter validation/escaping and
+turns off autoescaping, which can expose server-side template injection (SSTI)
+and cross-site scripting (XSS) risks.
 
 ## Authentication
 
