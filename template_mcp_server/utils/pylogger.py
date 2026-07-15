@@ -170,8 +170,10 @@ def get_uvicorn_log_config(log_level: str = "INFO") -> Dict[str, Any]:
             for name in names
         }
 
-    # Base uvicorn loggers
-    base_loggers = ["", "uvicorn", "uvicorn.error", "uvicorn.asgi", "uvicorn.protocols"]
+    # Passthrough formatter for structlog-originated messages (already rendered)
+    passthrough_formatter = {"format": "%(message)s"}
+
+    uvicorn_loggers = ["uvicorn", "uvicorn.error", "uvicorn.asgi", "uvicorn.protocols"]
     access_loggers = ["uvicorn.access"]
 
     return {
@@ -180,6 +182,7 @@ def get_uvicorn_log_config(log_level: str = "INFO") -> Dict[str, Any]:
         "formatters": {
             "default": default_formatter,
             "access": default_formatter,
+            "passthrough": passthrough_formatter,
         },
         "handlers": {
             "default": {
@@ -192,9 +195,19 @@ def get_uvicorn_log_config(log_level: str = "INFO") -> Dict[str, Any]:
                 "class": "logging.StreamHandler",
                 "stream": "ext://sys.stdout",
             },
+            "passthrough": {
+                "formatter": "passthrough",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+            },
         },
         "loggers": {
-            **make_logger_config(base_loggers, log_level),
+            "": {
+                "handlers": ["passthrough"],
+                "level": log_level,
+                "propagate": False,
+            },
+            **make_logger_config(uvicorn_loggers, log_level),
             **make_logger_config(access_loggers, log_level),
             **make_logger_config(
                 list(THIRD_PARTY_LOGGERS - ERROR_ONLY_LOGGERS), log_level

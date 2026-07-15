@@ -24,19 +24,21 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "fastmcp==2.14.2",
+    "fastmcp==3.4.2",
     "httpx==0.28.1",
     "pydantic==2.11.7",
     "pydantic-settings==2.10.1",
     "structlog==25.4.0",
     "python-dotenv==1.1.1",
-    "fastapi==0.116.0",
+    "fastapi==0.138.1",
     "uvicorn==0.35.0",
     "asyncpg==0.30.0",
     "psycopg==3.2.3",
     "itsdangerous==2.2.0",
     "requests-oauthlib==2.0.0",
     "Jinja2==3.1.6",
+    "tavily-python>=0.5.0",
+    "resend>=2.6.0",
 ]
 
 [project.optional-dependencies]
