@@ -21,7 +21,10 @@ from template_mcp_server.src.oauth.handler import OAuth2Handler
 from template_mcp_server.src.oauth.routes import register_oauth_routes
 from template_mcp_server.src.oauth.service import OAuthService
 from template_mcp_server.src.settings import settings
-from template_mcp_server.utils.pylogger import get_python_logger
+from template_mcp_server.utils.pylogger import (
+    attach_mcp_connection_error_filter,
+    get_python_logger,
+)
 
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
@@ -62,6 +65,8 @@ else:  # Default to standard HTTP (works for both "http" and "streamable-http")
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Combined lifespan handler for MCP and storage initialization."""
     global oauth_service_instance
+
+    attach_mcp_connection_error_filter(settings.ENABLE_MCP_CONNECTION_FILTER)
 
     # Initialize storage service before starting
     logger.info("Initializing storage service...")
