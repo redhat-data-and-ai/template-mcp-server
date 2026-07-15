@@ -99,6 +99,62 @@ def _configure_third_party_loggers(log_level: str) -> None:
         _setup_logger(name, log_level)
 
 
+# --- MCP Connection Error Filter ---
+
+MCP_FILTER_LOGGERS: tuple[str, ...] = (
+    "mcp",
+    "uvicorn.error",
+    "starlette",
+)
+
+
+class MCPConnectionErrorFilter(logging.Filter):
+    """Downgrade expected client disconnect errors from ERROR to DEBUG.
+
+    Expected transport disconnects are normal in production and should not
+    appear as application failures.
+    """
+
+    EXPECTED_PATTERNS: tuple[str, ...] = (
+        "client disconnected",
+        "connection reset",
+        "broken pipe",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Downgrade expected disconnect messages so handlers emit at DEBUG."""
+        message = record.getMessage().casefold()
+        if any(pattern in message for pattern in self.EXPECTED_PATTERNS):
+            # Handlers format output using record.levelno/levelname after
+            # filters run, so lowering both keeps the emitted level consistent.
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+        return True
+
+
+def attach_mcp_connection_error_filter(enabled: bool = True) -> None:
+    """Reduce production log noise from routine client disconnects.
+
+    Attaches MCPConnectionErrorFilter to MCP-related loggers without hiding
+    genuine application errors. Repeated calls are idempotent.
+
+    Args:
+        enabled: Whether to attach the filter. When False, no-op.
+    """
+    if not enabled:
+        return
+
+    connection_filter = MCPConnectionErrorFilter()
+    for logger_name in MCP_FILTER_LOGGERS:
+        logger = logging.getLogger(logger_name)
+        if any(
+            isinstance(existing_filter, MCPConnectionErrorFilter)
+            for existing_filter in logger.filters
+        ):
+            continue
+        logger.addFilter(connection_filter)
+
+
 # --- Public API ---
 
 
