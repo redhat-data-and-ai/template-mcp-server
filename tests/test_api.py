@@ -59,23 +59,20 @@ class TestAPI:
         assert response.headers["content-type"] == "application/json"
 
     @patch("template_mcp_server.src.api.settings")
-    def test_health_endpoint_with_different_transport_protocols(self, mock_settings):
-        """Test health endpoint with different transport protocols."""
-        # Arrange
-        protocols = ["streamable-http", "sse", "http"]
+    def test_health_endpoint_with_stdio(self, mock_settings):
+        """Test health endpoint reports stdio when configured for stdio.
+
+        Note: stdio transport bypasses the FastAPI app entirely (handled in main.py),
+        but the health endpoint still reports whatever MCP_TRANSPORT_PROTOCOL is set to.
+        """
         client = TestClient(app)
+        mock_settings.MCP_TRANSPORT_PROTOCOL = "stdio"
 
-        for protocol in protocols:
-            # Arrange
-            mock_settings.MCP_TRANSPORT_PROTOCOL = protocol
+        response = client.get("/health")
 
-            # Act
-            response = client.get("/health")
-
-            # Assert
-            assert response.status_code == 200
-            data = response.json()
-            assert data["transport_protocol"] == protocol
+        assert response.status_code == 200
+        data = response.json()
+        assert data["transport_protocol"] == "stdio"
 
     def test_app_mounts_mcp_app(self):
         """Test that the app mounts the MCP application."""
@@ -143,22 +140,11 @@ class TestAPI:
 
     @patch("template_mcp_server.src.api.settings")
     def test_transport_protocol_configuration(self, mock_settings):
-        """Test that different transport protocols are handled correctly."""
-        # Test SSE protocol
-        mock_settings.MCP_TRANSPORT_PROTOCOL = "sse"
-
-        # Re-import to test SSE configuration
+        """Test that streamable-http transport protocol is handled correctly."""
         import importlib
 
         import template_mcp_server.src.api as api_module
 
-        importlib.reload(api_module)
-
-        # Test HTTP protocol
-        mock_settings.MCP_TRANSPORT_PROTOCOL = "http"
-        importlib.reload(api_module)
-
-        # Test streamable-http protocol
         mock_settings.MCP_TRANSPORT_PROTOCOL = "streamable-http"
         importlib.reload(api_module)
 

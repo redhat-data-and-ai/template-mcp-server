@@ -44,7 +44,7 @@ graph TB
 
         subgraph "Transport Layer"
             T[HTTP Transport]
-            U[SSE Transport]
+            U[stdio Transport]
             V[Streamable HTTP Transport]
         end
     end
@@ -108,7 +108,7 @@ flowchart TD
     A[MCP Client Request] --> B{Transport Protocol?}
 
     B -->|HTTP/Streamable-HTTP| C[FastAPI App<br/>api.py]
-    B -->|SSE| D[SSE App<br/>create_sse_app]
+    B -->|stdio| D[stdio Transport<br/>run_stdio_async]
 
     C --> E[Health Check?]
     D --> E
@@ -243,7 +243,7 @@ template-mcp-server/
 ## Key Components
 
 - **`main.py`**: Application entry point with configuration validation, error handling, and uvicorn server startup
-- **`api.py`**: FastAPI application setup with transport protocol selection (HTTP/SSE/streamable-HTTP) and health endpoints
+- **`api.py`**: FastAPI application setup with Streamable HTTP transport and health endpoints
 - **`mcp.py`**: Core MCP server class that registers tools using FastMCP decorators
 - **`settings.py`**: Environment-based configuration using Pydantic BaseSettings with validation
 - **`tools/`**: MCP tool implementations demonstrating arithmetic, prompts, and resource access patterns

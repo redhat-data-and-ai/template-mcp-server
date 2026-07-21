@@ -177,7 +177,7 @@ make test
 # Start the server
 template-mcp-server
 
-# In another terminal -- list tools (SSE transport example)
+# In another terminal -- check server health
 curl http://localhost:5001/health
 ```
 

@@ -31,7 +31,7 @@ class TestMain:
     @patch("template_mcp_server.src.main.validate_config")
     @patch("template_mcp_server.src.main.uvicorn")
     def test_main_success(self, mock_uvicorn, mock_validate):
-        """Test successful main execution."""
+        """Test successful main execution with streamable-http."""
         mock_settings = Mock()
         mock_settings.MCP_HOST = "0.0.0.0"
         mock_settings.MCP_PORT = 4000
@@ -44,3 +44,27 @@ class TestMain:
 
             main()
             mock_uvicorn.run.assert_called_once()
+
+    @patch("template_mcp_server.src.main.validate_config")
+    @patch("template_mcp_server.src.main.asyncio")
+    def test_main_stdio_transport(self, mock_asyncio, mock_validate):
+        """Test that stdio transport calls run_stdio_async instead of uvicorn."""
+        mock_settings = Mock()
+        mock_settings.MCP_TRANSPORT_PROTOCOL = "stdio"
+
+        mock_server_instance = Mock()
+        mock_mcp_server_class = Mock(return_value=mock_server_instance)
+
+        with (
+            patch("template_mcp_server.src.main.settings", mock_settings),
+            patch(
+                "template_mcp_server.src.mcp.TemplateMCPServer",
+                mock_mcp_server_class,
+            ),
+        ):
+            from template_mcp_server.src.main import main
+
+            main()
+            mock_asyncio.run.assert_called_once_with(
+                mock_server_instance.mcp.run_stdio_async()
+            )

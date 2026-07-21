@@ -18,7 +18,7 @@ class TestSettings:
 
         # Assert
         assert settings.MCP_HOST == "localhost"
-        assert settings.MCP_TRANSPORT_PROTOCOL == "http"
+        assert settings.MCP_TRANSPORT_PROTOCOL == "streamable-http"
         assert settings.PYTHON_LOG_LEVEL == "INFO"
         assert settings.MCP_SSL_KEYFILE is None
         assert settings.MCP_SSL_CERTFILE is None
@@ -67,7 +67,7 @@ class TestSettings:
     def test_transport_protocol_validation(self):
         """Test transport protocol validation."""
         # Arrange
-        valid_protocols = ["streamable-http", "sse", "http"]
+        valid_protocols = ["streamable-http", "stdio"]
 
         # Act & Assert
         for protocol in valid_protocols:
@@ -154,7 +154,7 @@ class TestValidateConfig:
     def test_valid_transport_protocols(self):
         """Test all valid transport protocols pass validation."""
         # Arrange
-        valid_protocols = ["streamable-http", "sse", "http"]
+        valid_protocols = ["streamable-http", "stdio"]
 
         # Act & Assert
         for protocol in valid_protocols:

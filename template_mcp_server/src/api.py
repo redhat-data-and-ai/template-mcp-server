@@ -49,13 +49,7 @@ PUBLIC_PATHS = frozenset(
     }
 )
 
-# Choose the appropriate transport protocol based on settings
-if settings.MCP_TRANSPORT_PROTOCOL == "sse":
-    from fastmcp.server.http import create_sse_app
-
-    mcp_app = create_sse_app(server.mcp, message_path="/sse/message", sse_path="/sse")
-else:  # Default to standard HTTP (works for both "http" and "streamable-http")
-    mcp_app = server.mcp.http_app(path="/mcp")
+mcp_app = server.mcp.http_app(path="/mcp")
 
 
 @asynccontextmanager
