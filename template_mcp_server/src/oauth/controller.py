@@ -34,6 +34,18 @@ if settings.USE_EXTERNAL_BROWSER_AUTH:
     import template_mcp_server.src.api as api_module
 
 
+def _get_issuer() -> str:
+    safe_default = "http://localhost:5001"
+    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or safe_default
+    try:
+        parsed = urlparse(endpoint)
+        if parsed.scheme in ("http", "https") and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        pass
+    return safe_default
+
+
 async def handle_callback(request: Request, oauth_service: OAuthService) -> Response:
     """Handle OAuth callback endpoint."""
     code = request.query_params.get("code")
@@ -88,6 +100,7 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
     query_dict = {
         "code": code_from_session,
         "state": state_from_session,
+        "iss": _get_issuer(),
     }
     redirect_url_str = f"{redirect_url.scheme}://{redirect_url.netloc}{redirect_url.path}?{urlencode(query_dict)}"
     return RedirectResponse(url=redirect_url_str, status_code=302)

@@ -9,6 +9,44 @@ from template_mcp_server.src.oauth.service import OAuthService
 
 
 class TestOAuthControllerHandleCallback:
+    """Verifies that iss is present in the redirect AND that the value matches the configured MCP_HOST_ENDPOINT (URL-encoded in the query string)."""
+
+    @patch("template_mcp_server.src.oauth.controller.settings")
+    @pytest.mark.asyncio
+    async def test_handle_callback_includes_iss_parameter(self, mock_settings):
+        """Test that authorization response includes iss per RFC 9207."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
+        mock_settings.MCP_HOST_ENDPOINT = "https://mcp.example.com"
+
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": "auth_code_123",
+            "state": "state_123",
+        }.get(key)
+        mock_request.session = {
+            "user_details": {
+                "auth_code": "stored_code",
+                "state": "stored_state",
+                "redirect_uri": "http://localhost:3000/callback",
+            }
+        }
+
+        mock_token = {"access_token": "token123"}
+
+        with patch(
+            "template_mcp_server.src.oauth.controller.OAuth2Handler"
+        ) as mock_handler:
+            mock_handler.get_access_token_from_authorization_code_flow.return_value = (
+                mock_token
+            )
+            oauth_service = AsyncMock(spec=OAuthService)
+            oauth_service.add_token_to_code = AsyncMock()
+
+            result = await controller.handle_callback(mock_request, oauth_service)
+
+            location = result.headers["location"]
+            assert "iss=https%3A%2F%2Fmcp.example.com" in location
+
     """Test handle_callback function."""
 
     @patch("template_mcp_server.src.oauth.controller.settings")
@@ -60,6 +98,7 @@ class TestOAuthControllerHandleCallback:
             assert isinstance(result, RedirectResponse)
             assert result.status_code == 302
             assert "code=stored_code_123" in result.headers["location"]
+            assert "iss=" in result.headers["location"]
 
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio

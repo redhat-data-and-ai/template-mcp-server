@@ -304,6 +304,7 @@ async def well_known_oauth_authorization_server():
     host = get_host()
     return {
         "issuer": host,
+        "authorization_response_iss_parameter_supported": True,
         "authorization_endpoint": f"{host}/auth/authorize",
         "token_endpoint": f"{host}/auth/token",
         "registration_endpoint": f"{host}/auth/register",
