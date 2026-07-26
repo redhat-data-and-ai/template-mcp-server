@@ -316,6 +316,24 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+    ENABLE_GRACEFUL_SHUTDOWN: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_GRACEFUL_SHUTDOWN",
+            "description": "Register SIGINT/SIGTERM handlers for bounded cleanup",
+            "example": True,
+        },
+    )
+    SHUTDOWN_TIMEOUT_SECONDS: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        json_schema_extra={
+            "env": "SHUTDOWN_TIMEOUT_SECONDS",
+            "description": "Maximum seconds to wait for graceful shutdown cleanup",
+            "example": 30,
+        },
+    )
 
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":

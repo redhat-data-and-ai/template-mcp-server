@@ -8,6 +8,10 @@ import uvicorn
 from template_mcp_server.src.api import app
 from template_mcp_server.src.settings import settings
 from template_mcp_server.src.settings import validate_config as validate_config_func
+from template_mcp_server.utils.graceful_shutdown import (
+    GracefulShutdownManager,
+    register_graceful_shutdown,
+)
 from template_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
 
 # Initialize logger
@@ -91,6 +95,16 @@ def main() -> None:
 
         logger.info(
             f"Server configured to use {settings.MCP_TRANSPORT_PROTOCOL} protocol"
+        )
+
+        shutdown_manager = GracefulShutdownManager(
+            timeout_seconds=settings.SHUTDOWN_TIMEOUT_SECONDS,
+            logger=logger,
+        )
+        register_graceful_shutdown(
+            app,
+            shutdown_manager,
+            enabled=settings.ENABLE_GRACEFUL_SHUTDOWN,
         )
 
         uvicorn_config: dict[str, Any] = {}

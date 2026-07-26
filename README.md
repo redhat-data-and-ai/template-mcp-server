@@ -109,6 +109,8 @@ The output should be empty (or only match this README section itself).
 | `MCP_SSL_KEYFILE`           | `None`      | SSL private key file path                                            |
 | `MCP_SSL_CERTFILE`          | `None`      | SSL certificate file path                                            |
 | `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
+| `ENABLE_GRACEFUL_SHUTDOWN`  | `True`      | Register SIGINT/SIGTERM handlers for bounded shutdown cleanup          |
+| `SHUTDOWN_TIMEOUT_SECONDS`  | `30`        | Maximum seconds to wait for graceful shutdown cleanup                   |
 | `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
 | `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
 
