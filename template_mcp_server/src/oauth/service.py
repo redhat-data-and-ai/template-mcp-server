@@ -14,6 +14,7 @@ import hashlib
 import secrets
 import time
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from template_mcp_server.src.settings import settings
 from template_mcp_server.src.storage.storage_service import StorageService
@@ -23,6 +24,24 @@ logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
 # Global storage service for backward compatibility during transition
 _storage_service: Optional[StorageService] = None
+
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "[::1]", "::1"})
+
+
+def _infer_application_type(redirect_uris: List[str]) -> str:
+    """Infer application_type from redirect URIs per SEP-837.
+
+    Loopback hosts and custom-scheme URIs → "native"; any non-loopback
+    http/https URI → "web".
+    """
+    for uri in redirect_uris:
+        parsed = urlparse(uri)
+        if parsed.scheme in ("http", "https"):
+            host = parsed.hostname or ""
+            if host not in _LOOPBACK_HOSTS:
+                return "web"
+    return "native"
 
 
 def generate_random_string(length: int = 32) -> str:
@@ -151,6 +170,7 @@ class OAuthService:
         grant_types: Optional[List[str]] = None,
         response_types: Optional[List[str]] = None,
         scope: Optional[str] = None,
+        application_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Register a new OAuth client.
 
@@ -173,8 +193,11 @@ class OAuthService:
                 "grant_types": existing_client["grant_types"],
                 "response_types": existing_client["response_types"],
                 "scope": existing_client["scope"],
+                "application_type": existing_client.get("application_type", "web"),
                 "client_id_issued_at": int(existing_client["created_at"]),
             }
+
+        resolved_type = application_type or _infer_application_type(redirect_uris)
 
         client_id = generate_random_string(16)
         client_secret = generate_random_string(32)
@@ -187,6 +210,7 @@ class OAuthService:
             "grant_types": grant_types or ["authorization_code", "refresh_token"],
             "response_types": response_types or ["code"],
             "scope": scope or "read write",
+            "application_type": resolved_type,
             "created_at": time.time(),
         }
 
@@ -206,6 +230,7 @@ class OAuthService:
             "grant_types": client_data["grant_types"],
             "response_types": client_data["response_types"],
             "scope": client_data["scope"],
+            "application_type": resolved_type,
             "client_id_issued_at": int(time.time()),
         }
 
@@ -322,12 +347,13 @@ async def register_client(
     grant_types: Optional[List[str]] = None,
     response_types: Optional[List[str]] = None,
     scope: Optional[str] = None,
+    application_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Register a new OAuth client."""
     storage = await get_storage_service()
     service = OAuthService(storage)
     return await service.register_client(
-        client_name, redirect_uris, grant_types, response_types, scope
+        client_name, redirect_uris, grant_types, response_types, scope, application_type
     )
 
 

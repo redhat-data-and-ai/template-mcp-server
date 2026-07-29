@@ -191,6 +191,7 @@ class TestRegisterEndpointRoute:
             "grant_types": ["authorization_code"],
             "response_types": ["code"],
             "scope": "read write",
+            "application_type": "native",
             "client_id_issued_at": 1234567890,
         }
 

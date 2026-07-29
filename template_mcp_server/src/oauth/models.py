@@ -74,6 +74,10 @@ class ClientRegistrationRequest(BaseModel):
     scope: Optional[str] = Field(
         default="read write", description="Space-separated list of scope values"
     )
+    application_type: Optional[str] = Field(
+        default=None,
+        description="Client application type (web or native). Inferred from redirect_uris if omitted.",
+    )
 
 
 class TokenIntrospectionRequest(BaseModel):
@@ -130,6 +134,9 @@ class ClientRegistrationResponse(BaseModel):
         ..., description="Array of OAuth 2.0 response types"
     )
     scope: str = Field(..., description="Space-separated list of scope values")
+    application_type: str = Field(
+        ..., description="Client application type (web or native)"
+    )
     client_id_issued_at: int = Field(..., description="Time when client ID was issued")
 
 

@@ -512,6 +512,7 @@ async def handle_register(
             registration_request.grant_types,
             registration_request.response_types,
             registration_request.scope,
+            registration_request.application_type,
         )
 
         return ClientRegistrationResponse(**client_response)

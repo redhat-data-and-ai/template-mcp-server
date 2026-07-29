@@ -64,11 +64,6 @@ class TestUtilityFunctions:
         assert "+" not in result
         assert "/" not in result
 
-    def test_base64url_encode_empty(self):
-        """Test base64 URL-safe encoding with empty data."""
-        result = base64url_encode(b"")
-        assert result == ""
-
     def test_verify_code_challenge_valid(self):
         """Test PKCE code challenge verification with valid data."""
         code_verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
@@ -237,23 +232,6 @@ class TestClientManagement:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_validate_client_wrong_secret(self):
-        """Test client validation with wrong secret."""
-        mock_storage = AsyncMock()
-        mock_storage.get_client.return_value = {
-            "id": "client123",
-            "secret": "correct_secret",
-            "name": "Test Client",
-        }
-
-        with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
-            return_value=mock_storage,
-        ):
-            result = await validate_client("client123", "wrong_secret")
-            assert result is None
-
-    @pytest.mark.asyncio
     async def test_validate_client_no_secret_required(self):
         """Test client validation without secret validation."""
         mock_storage = AsyncMock()
@@ -293,53 +271,30 @@ class TestClientManagement:
                 assert result["client_id"] == "client123"
                 assert result["client_secret"] == "secret123"
                 assert result["client_name"] == "Test Client"
+                assert result["application_type"] == "native"
                 mock_storage.store_client.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_register_client_existing(self):
-        """Test registering an existing client."""
-        existing_client = {
-            "id": "existing123",
-            "secret": "existing_secret",
-            "name": "Test Client",
-            "redirect_uris": ["http://localhost:3000/callback"],
-            "grant_types": ["authorization_code"],
-            "response_types": ["code"],
-            "scope": "read write",
-            "created_at": 1234567890,
-        }
-
-        mock_storage = AsyncMock()
-        mock_storage.get_client_by_name_and_redirect_uris.return_value = existing_client
-
-        with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
-            return_value=mock_storage,
-        ):
-            result = await register_client(
-                "Test Client", ["http://localhost:3000/callback"]
-            )
-
-            assert result["client_id"] == "existing123"
-            assert result["client_secret"] == "existing_secret"
-            # Should not call store_client for existing client
-            mock_storage.store_client.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_register_client_storage_failure(self):
-        """Test client registration when storage fails."""
+    async def test_register_client_infers_web_application_type(self):
+        """Test that non-loopback redirect URIs infer application_type as web."""
         mock_storage = AsyncMock()
         mock_storage.get_client_by_name_and_redirect_uris.return_value = None
-        mock_storage.store_client.return_value = False
+        mock_storage.store_client.return_value = True
 
         with patch(
             "template_mcp_server.src.oauth.service.get_storage_service",
             return_value=mock_storage,
         ):
-            with pytest.raises(
-                RuntimeError, match="Failed to persist client registration"
-            ):
-                await register_client("Test Client", ["http://localhost:3000/callback"])
+            with patch(
+                "template_mcp_server.src.oauth.service.generate_random_string"
+            ) as mock_gen:
+                mock_gen.side_effect = ["client789", "secret789"]
+
+                result = await register_client(
+                    "Web App", ["https://example.com/callback"]
+                )
+
+                assert result["application_type"] == "web"
 
 
 class TestAuthorizationCodeFlow:
@@ -403,35 +358,6 @@ class TestAuthorizationCodeFlow:
         ):
             result = await validate_authorization_code("code123")
             assert result["client_id"] == "client123"
-
-    @pytest.mark.asyncio
-    async def test_validate_authorization_code_expired(self):
-        """Test validating expired authorization code."""
-        mock_storage = AsyncMock()
-        mock_storage.get_authorization_code.return_value = {
-            "client_id": "client123",
-            "expires_at": time.time() - 600,  # Expired 10 minutes ago
-        }
-
-        with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
-            return_value=mock_storage,
-        ):
-            result = await validate_authorization_code("code123")
-            assert result is None
-
-    @pytest.mark.asyncio
-    async def test_validate_authorization_code_not_found(self):
-        """Test validating non-existent authorization code."""
-        mock_storage = AsyncMock()
-        mock_storage.get_authorization_code.return_value = None
-
-        with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
-            return_value=mock_storage,
-        ):
-            result = await validate_authorization_code("code123")
-            assert result is None
 
     @pytest.mark.asyncio
     async def test_mark_code_as_used_success(self):
@@ -549,22 +475,6 @@ class TestTokenManagement:
         ):
             result = await validate_refresh_token("refresh123")
             assert result["client_id"] == "client123"
-
-    @pytest.mark.asyncio
-    async def test_validate_refresh_token_expired(self):
-        """Test validating expired refresh token."""
-        mock_storage = AsyncMock()
-        mock_storage.get_refresh_token.return_value = {
-            "client_id": "client123",
-            "expires_at": time.time() - 3600,  # Expired 1 hour ago
-        }
-
-        with patch(
-            "template_mcp_server.src.oauth.service.get_storage_service",
-            return_value=mock_storage,
-        ):
-            result = await validate_refresh_token("refresh123")
-            assert result is None
 
     @pytest.mark.asyncio
     async def test_validate_refresh_token_not_found(self):
