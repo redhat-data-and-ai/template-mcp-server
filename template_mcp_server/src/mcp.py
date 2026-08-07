@@ -38,6 +38,7 @@ class TemplateMCPServer:
             force_reconfigure_all_loggers(settings.PYTHON_LOG_LEVEL)
 
             self._register_mcp_tools()
+            self._ensure_deterministic_tool_order()
 
             logger.info("Template MCP Server initialized successfully")
 
@@ -61,3 +62,16 @@ class TemplateMCPServer:
         self.mcp.tool()(search_web)
         self.mcp.tool()(send_email)
         self.mcp.tool()(validate_email)
+
+    def _ensure_deterministic_tool_order(self) -> None:
+        """SEP-2549: Wrap list_tools to return tools sorted by name.
+
+        Deterministic ordering enables client caching and LLM prompt cache hits.
+        """
+        original_list_tools = self.mcp.list_tools
+
+        async def sorted_list_tools(**kwargs):
+            tools = await original_list_tools(**kwargs)
+            return sorted(tools, key=lambda t: t.name)
+
+        self.mcp.list_tools = sorted_list_tools

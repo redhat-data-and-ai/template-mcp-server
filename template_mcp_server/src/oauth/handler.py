@@ -18,7 +18,7 @@ from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
-SCOPE = ["email", "openid", "profile", "session:role-any"]
+SCOPE = settings.SSO_SCOPES
 
 
 class OAuth2Handler:
@@ -81,7 +81,7 @@ class OAuth2Handler:
                     "client_secret": settings.SSO_CLIENT_SECRET,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=10.0,
+                timeout=settings.SSO_INTROSPECTION_TIMEOUT,
             )
             response.raise_for_status()
 

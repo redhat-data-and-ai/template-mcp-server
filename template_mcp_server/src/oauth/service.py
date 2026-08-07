@@ -20,9 +20,36 @@ from template_mcp_server.src.settings import settings
 from template_mcp_server.src.storage.storage_service import StorageService
 from template_mcp_server.utils.pylogger import get_python_logger
 
+_ISSUER_SAFE_DEFAULT = "http://localhost:5001"
+
+
+def get_current_issuer() -> str:
+    """Return the OAuth issuer identifier.
+
+    Uses OAUTH_ISSUER setting when configured, otherwise derives from
+    MCP_HOST_ENDPOINT origin. Mirrors api.get_host() logic to ensure
+    the issuer is consistent across the system.
+    """
+    explicit = getattr(settings, "OAUTH_ISSUER", None)
+    if explicit:
+        return explicit
+    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or _ISSUER_SAFE_DEFAULT
+    try:
+        parsed = urlparse(endpoint)
+        if (
+            parsed.scheme in ("http", "https")
+            and parsed.netloc
+            and " " not in parsed.netloc
+            and not parsed.scheme.isspace()
+        ):
+            return f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        pass
+    return _ISSUER_SAFE_DEFAULT
+
+
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
-# Global storage service for backward compatibility during transition
 _storage_service: Optional[StorageService] = None
 
 
@@ -85,19 +112,21 @@ def verify_code_challenge(code_verifier: str, code_challenge: str) -> bool:
 class OAuthService:
     """OAuth service that manages OAuth 2.0 operations with dependency injection."""
 
-    def __init__(self, storage_service: StorageService):
+    def __init__(self, storage_service: StorageService, issuer: str):
         """Initialize OAuth service with storage dependency.
 
         Args:
             storage_service: The storage service instance to use for persistence
+            issuer: The authorization server issuer identifier (SEP-2352)
         """
         self.storage = storage_service
+        self.issuer = issuer
 
     async def validate_client(
         self, client_id: str, client_secret: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
-        """Validate client credentials."""
-        client = await self.storage.get_client(client_id)
+        """Validate client credentials against the current issuer."""
+        client = await self.storage.get_client(client_id, self.issuer)
         if not client:
             return None
 
@@ -119,6 +148,7 @@ class OAuthService:
         auth_code = generate_random_string(32)
         code_data = {
             "client_id": client_id,
+            "issuer": self.issuer,
             "redirect_uri": redirect_uri,
             "scope": scope or "read",
             "code_challenge": code_challenge,
@@ -178,7 +208,7 @@ class OAuthService:
         returns the existing client credentials instead of creating a new one.
         """
         existing_client = await self.storage.get_client_by_name_and_redirect_uris(
-            client_name, redirect_uris
+            client_name, redirect_uris, self.issuer
         )
 
         if existing_client:
@@ -193,7 +223,7 @@ class OAuthService:
                 "grant_types": existing_client["grant_types"],
                 "response_types": existing_client["response_types"],
                 "scope": existing_client["scope"],
-                "application_type": existing_client.get("application_type", "web"),
+                "application_type": existing_client["application_type"],
                 "client_id_issued_at": int(existing_client["created_at"]),
             }
 
@@ -205,6 +235,7 @@ class OAuthService:
         client_data = {
             "id": client_id,
             "secret": client_secret,
+            "issuer": self.issuer,
             "name": client_name,
             "redirect_uris": redirect_uris,
             "grant_types": grant_types or ["authorization_code", "refresh_token"],
@@ -236,6 +267,7 @@ class OAuthService:
 
     async def store_access_token(self, token: str, token_data: Dict[str, Any]) -> bool:
         """Store an access token."""
+        token_data["issuer"] = self.issuer
         return await self.storage.store_access_token(token, token_data)
 
     async def retrieve_access_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -244,6 +276,7 @@ class OAuthService:
 
     async def store_refresh_token(self, token: str, token_data: Dict[str, Any]) -> bool:
         """Store a refresh token."""
+        token_data["issuer"] = self.issuer
         return await self.storage.store_refresh_token(token, token_data)
 
     async def retrieve_refresh_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -261,149 +294,6 @@ class OAuthService:
     async def get_storage_status(self) -> Dict[str, Any]:
         """Get the current status of the storage service."""
         return await self.storage.get_status()
-
-
-# Backward compatibility functions - will be deprecated in future versions
-async def get_storage_service() -> StorageService:
-    """Get the initialized storage service.
-
-    Note: Storage service must be initialized via initialize_storage() during startup.
-
-    Returns:
-        StorageService: The initialized storage service
-
-    Raises:
-        RuntimeError: If storage service hasn't been initialized
-    """
-    global _storage_service
-    if _storage_service is None:
-        raise RuntimeError(
-            "Storage service not initialized. Ensure initialize_storage() is called during startup."
-        )
-    return _storage_service
-
-
-async def validate_client(
-    client_id: str, client_secret: Optional[str] = None
-) -> Optional[Dict[str, Any]]:
-    """Validate client credentials."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.validate_client(client_id, client_secret)
-
-
-async def create_authorization_code(
-    client_id: str,
-    redirect_uri: str,
-    scope: Optional[str],
-    code_challenge: str,
-    code_challenge_method: str,
-    state: str,
-) -> str:
-    """Create an authorization code."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.create_authorization_code(
-        client_id,
-        redirect_uri,
-        scope,
-        code_challenge,
-        code_challenge_method,
-        state,
-    )
-
-
-async def add_token_to_code(code: str, token_set: Dict[str, Any]) -> None:
-    """Add Snowflake token to authorization code."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    await service.add_token_to_code(code, token_set)
-
-
-async def validate_authorization_code(code: str) -> Optional[Dict[str, Any]]:
-    """Validate authorization code."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.validate_authorization_code(code)
-
-
-async def mark_code_as_used(code: str) -> None:
-    """Mark authorization code as used by deleting it from storage."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    await service.mark_code_as_used(code)
-
-
-async def validate_refresh_token(refresh_token: str) -> Optional[Dict[str, Any]]:
-    """Validate refresh token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.validate_refresh_token(refresh_token)
-
-
-async def register_client(
-    client_name: str,
-    redirect_uris: List[str],
-    grant_types: Optional[List[str]] = None,
-    response_types: Optional[List[str]] = None,
-    scope: Optional[str] = None,
-    application_type: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Register a new OAuth client."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.register_client(
-        client_name, redirect_uris, grant_types, response_types, scope, application_type
-    )
-
-
-async def store_access_token(token: str, token_data: Dict[str, Any]) -> bool:
-    """Store an access token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.store_access_token(token, token_data)
-
-
-async def retrieve_access_token(token: str) -> Optional[Dict[str, Any]]:
-    """Retrieve an access token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.retrieve_access_token(token)
-
-
-async def store_refresh_token(token: str, token_data: Dict[str, Any]) -> bool:
-    """Store a refresh token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.store_refresh_token(token, token_data)
-
-
-async def retrieve_refresh_token(token: str) -> Optional[Dict[str, Any]]:
-    """Retrieve a refresh token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.retrieve_refresh_token(token)
-
-
-async def revoke_access_token(token: str) -> bool:
-    """Revoke (delete) an access token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.revoke_access_token(token)
-
-
-async def revoke_refresh_token(token: str) -> bool:
-    """Revoke (delete) a refresh token."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.revoke_refresh_token(token)
-
-
-async def get_storage_status() -> Dict[str, Any]:
-    """Get the current status of the storage service."""
-    storage = await get_storage_service()
-    service = OAuthService(storage)
-    return await service.get_storage_status()
 
 
 async def initialize_storage() -> StorageService:

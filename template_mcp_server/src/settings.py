@@ -278,6 +278,73 @@ class Settings(BaseSettings):
         },
     )
 
+    # Session Cookie Configuration
+    SESSION_COOKIE_HTTPS_ONLY: Optional[bool] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "SESSION_COOKIE_HTTPS_ONLY",
+            "description": "Require HTTPS for session cookies. Auto-detected from ENVIRONMENT if not set (True in production, False in development).",
+            "example": True,
+        },
+    )
+    SESSION_COOKIE_SAME_SITE: str = Field(
+        default="lax",
+        json_schema_extra={
+            "env": "SESSION_COOKIE_SAME_SITE",
+            "description": "SameSite attribute for session cookies",
+            "example": "lax",
+            "enum": ["strict", "lax", "none"],
+        },
+    )
+    SESSION_COOKIE_MAX_AGE: int = Field(
+        default=86400,
+        ge=60,
+        le=604800,
+        json_schema_extra={
+            "env": "SESSION_COOKIE_MAX_AGE",
+            "description": "Session cookie max age in seconds (default 86400 = 1 day)",
+            "example": 86400,
+        },
+    )
+
+    # OAuth Token Configuration
+    OAUTH_ISSUER: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "OAUTH_ISSUER",
+            "description": "OAuth authorization server issuer identifier (RFC 8414). Defaults to MCP_HOST_ENDPOINT origin if not set.",
+            "example": "https://mcp.example.com",
+        },
+    )
+    ACCESS_TOKEN_EXPIRY: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        json_schema_extra={
+            "env": "ACCESS_TOKEN_EXPIRY",
+            "description": "Access token expiry time in seconds (default 3600 = 1 hour)",
+            "example": 3600,
+        },
+    )
+    SSO_SCOPES: List[str] = Field(
+        default=["email", "openid", "profile"],
+        json_schema_extra={
+            "env": "SSO_SCOPES",
+            "description": "OAuth scopes to request from the upstream SSO provider",
+            "example": ["email", "openid", "profile"],
+        },
+    )
+    SSO_INTROSPECTION_TIMEOUT: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=60.0,
+        json_schema_extra={
+            "env": "SSO_INTROSPECTION_TIMEOUT",
+            "description": "Timeout in seconds for SSO token introspection requests",
+            "example": 10.0,
+        },
+    )
+
     # Web Search (Tavily) Configuration
     TAVILY_API_KEY: str = Field(
         default="",

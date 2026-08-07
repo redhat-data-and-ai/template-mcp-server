@@ -98,18 +98,20 @@ class StorageService:
             # OAuth Clients table
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS oauth_clients (
-                    client_id VARCHAR(255) PRIMARY KEY,
+                    client_id VARCHAR(255) NOT NULL,
+                    issuer VARCHAR(500) NOT NULL,
                     client_secret VARCHAR(255) NOT NULL,
                     client_name VARCHAR(255) NOT NULL,
                     redirect_uris JSONB NOT NULL,
                     grant_types JSONB NOT NULL,
                     response_types JSONB NOT NULL,
                     scope VARCHAR(255) NOT NULL,
+                    application_type VARCHAR(50) NOT NULL DEFAULT 'web',
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-                    -- Unique constraint for client name + redirect URIs combination
-                    CONSTRAINT unique_client_name_redirect UNIQUE (client_name, redirect_uris)
+                    PRIMARY KEY (issuer, client_id),
+                    CONSTRAINT unique_client_name_redirect_issuer UNIQUE (issuer, client_name, redirect_uris)
                 )
             """)
 
@@ -118,6 +120,7 @@ class StorageService:
                 CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
                     code VARCHAR(255) PRIMARY KEY,
                     client_id VARCHAR(255) NOT NULL,
+                    issuer VARCHAR(500) NOT NULL,
                     redirect_uri VARCHAR(500) NOT NULL,
                     scope VARCHAR(255),
                     code_challenge VARCHAR(255) NOT NULL,
@@ -127,7 +130,7 @@ class StorageService:
                     state VARCHAR(255),
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-                    FOREIGN KEY (client_id) REFERENCES oauth_clients(client_id) ON DELETE CASCADE
+                    FOREIGN KEY (issuer, client_id) REFERENCES oauth_clients(issuer, client_id) ON DELETE CASCADE
                 )
             """)
 
@@ -136,12 +139,13 @@ class StorageService:
                 CREATE TABLE IF NOT EXISTS oauth_access_tokens (
                     token VARCHAR(255) PRIMARY KEY,
                     client_id VARCHAR(255) NOT NULL,
+                    issuer VARCHAR(500) NOT NULL,
                     scope VARCHAR(255),
                     token_type VARCHAR(50) DEFAULT 'Bearer',
                     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-                    FOREIGN KEY (client_id) REFERENCES oauth_clients(client_id) ON DELETE CASCADE
+                    FOREIGN KEY (issuer, client_id) REFERENCES oauth_clients(issuer, client_id) ON DELETE CASCADE
                 )
             """)
 
@@ -150,12 +154,13 @@ class StorageService:
                 CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
                     token VARCHAR(255) PRIMARY KEY,
                     client_id VARCHAR(255) NOT NULL,
+                    issuer VARCHAR(500) NOT NULL,
                     access_token VARCHAR(255),
                     scope VARCHAR(255),
                     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-                    FOREIGN KEY (client_id) REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+                    FOREIGN KEY (issuer, client_id) REFERENCES oauth_clients(issuer, client_id) ON DELETE CASCADE,
                     FOREIGN KEY (access_token) REFERENCES oauth_access_tokens(token) ON DELETE SET NULL
                 )
             """)
@@ -172,6 +177,9 @@ class StorageService:
             )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_client_name ON oauth_clients (client_name)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_clients_issuer ON oauth_clients (issuer)"
             )
 
             logger.info("OAuth database tables created successfully")
@@ -200,9 +208,9 @@ class StorageService:
             return {"type": "postgresql", "healthy": False, "error": str(e)}
 
     async def get_client_by_name_and_redirect_uris(
-        self, client_name: str, redirect_uris: List[str]
+        self, client_name: str, redirect_uris: List[str], issuer: str
     ) -> Optional[Dict[str, Any]]:
-        """Find an existing client by name and redirect URIs."""
+        """Find an existing client by name, redirect URIs, and issuer."""
         try:
             if not self.pool:
                 return None
@@ -211,12 +219,13 @@ class StorageService:
                 result = await conn.fetchrow(
                     """
                     SELECT client_id, client_secret, client_name, redirect_uris,
-                           grant_types, response_types, scope, created_at
+                           grant_types, response_types, scope, issuer, application_type, created_at
                     FROM oauth_clients
-                    WHERE client_name = $1 AND redirect_uris = $2
+                    WHERE client_name = $1 AND redirect_uris = $2 AND issuer = $3
                 """,
                     client_name,
                     json.dumps(redirect_uris),
+                    issuer,
                 )
 
                 if result:
@@ -228,6 +237,8 @@ class StorageService:
                         "grant_types": json.loads(result["grant_types"]),
                         "response_types": json.loads(result["response_types"]),
                         "scope": result["scope"],
+                        "issuer": result["issuer"],
+                        "application_type": result["application_type"],
                         "created_at": result["created_at"].timestamp(),
                     }
                 return None
@@ -246,8 +257,8 @@ class StorageService:
                 await conn.execute(
                     """
                     INSERT INTO oauth_clients
-                    (client_id, client_secret, client_name, redirect_uris, grant_types, response_types, scope)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    (client_id, client_secret, client_name, redirect_uris, grant_types, response_types, scope, issuer, application_type)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 """,
                     client_data["id"],
                     client_data["secret"],
@@ -256,6 +267,8 @@ class StorageService:
                     json.dumps(client_data["grant_types"]),
                     json.dumps(client_data["response_types"]),
                     client_data["scope"],
+                    client_data["issuer"],
+                    client_data.get("application_type", "web"),
                 )
 
                 logger.info(f"Storing client: {client_data['id']}")
@@ -265,8 +278,8 @@ class StorageService:
             logger.error(f"Failed to store client: {e}")
             return False
 
-    async def get_client(self, client_id: str) -> Optional[Dict[str, Any]]:
-        """Get a client by ID."""
+    async def get_client(self, client_id: str, issuer: str) -> Optional[Dict[str, Any]]:
+        """Get a client by ID and issuer."""
         try:
             if not self.pool:
                 return None
@@ -275,11 +288,12 @@ class StorageService:
                 result = await conn.fetchrow(
                     """
                     SELECT client_id, client_secret, client_name, redirect_uris,
-                           grant_types, response_types, scope, created_at
+                           grant_types, response_types, scope, issuer, application_type, created_at
                     FROM oauth_clients
-                    WHERE client_id = $1
+                    WHERE client_id = $1 AND issuer = $2
                 """,
                     client_id,
+                    issuer,
                 )
 
                 if result:
@@ -291,6 +305,8 @@ class StorageService:
                         "grant_types": json.loads(result["grant_types"]),
                         "response_types": json.loads(result["response_types"]),
                         "scope": result["scope"],
+                        "issuer": result["issuer"],
+                        "application_type": result["application_type"],
                         "created_at": result["created_at"].timestamp(),
                     }
                 return None
@@ -311,11 +327,12 @@ class StorageService:
                 await conn.execute(
                     """
                     INSERT INTO oauth_authorization_codes
-                    (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at, state)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    (code, client_id, issuer, redirect_uri, scope, code_challenge, code_challenge_method, expires_at, state)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 """,
                     code,
                     code_data["client_id"],
+                    code_data["issuer"],
                     code_data["redirect_uri"],
                     code_data.get("scope"),
                     code_data["code_challenge"],
@@ -340,7 +357,7 @@ class StorageService:
             async with self.pool.acquire() as conn:
                 result = await conn.fetchrow(
                     """
-                    SELECT code, client_id, redirect_uri, scope, code_challenge,
+                    SELECT code, client_id, issuer, redirect_uri, scope, code_challenge,
                            code_challenge_method, snowflake_token, expires_at, state
                     FROM oauth_authorization_codes
                     WHERE code = $1
@@ -351,6 +368,7 @@ class StorageService:
                 if result:
                     return {
                         "client_id": result["client_id"],
+                        "issuer": result["issuer"],
                         "redirect_uri": result["redirect_uri"],
                         "scope": result["scope"],
                         "code_challenge": result["code_challenge"],
@@ -420,11 +438,12 @@ class StorageService:
                 await conn.execute(
                     """
                     INSERT INTO oauth_access_tokens
-                    (token, client_id, scope, expires_at)
-                    VALUES ($1, $2, $3, $4)
+                    (token, client_id, issuer, scope, expires_at)
+                    VALUES ($1, $2, $3, $4, $5)
                 """,
                     token,
                     token_data["client_id"],
+                    token_data["issuer"],
                     token_data.get("scope"),
                     datetime.fromtimestamp(token_data["expires_at"]).replace(
                         tzinfo=timezone.utc
@@ -445,7 +464,7 @@ class StorageService:
             async with self.pool.acquire() as conn:
                 result = await conn.fetchrow(
                     """
-                    SELECT token, client_id, scope, token_type, expires_at
+                    SELECT token, client_id, issuer, scope, token_type, expires_at
                     FROM oauth_access_tokens
                     WHERE token = $1
                 """,
@@ -455,6 +474,7 @@ class StorageService:
                 if result:
                     return {
                         "client_id": result["client_id"],
+                        "issuer": result["issuer"],
                         "scope": result["scope"],
                         "token_type": result["token_type"],
                         "expires_at": result["expires_at"].timestamp(),
@@ -494,11 +514,12 @@ class StorageService:
                 await conn.execute(
                     """
                     INSERT INTO oauth_refresh_tokens
-                    (token, client_id, access_token, scope, expires_at)
-                    VALUES ($1, $2, $3, $4, $5)
+                    (token, client_id, issuer, access_token, scope, expires_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
                 """,
                     token,
                     token_data["client_id"],
+                    token_data["issuer"],
                     token_data.get("access_token"),
                     token_data.get("scope"),
                     datetime.fromtimestamp(token_data["expires_at"]).replace(
@@ -520,7 +541,7 @@ class StorageService:
             async with self.pool.acquire() as conn:
                 result = await conn.fetchrow(
                     """
-                    SELECT token, client_id, access_token, scope, expires_at
+                    SELECT token, client_id, issuer, access_token, scope, expires_at
                     FROM oauth_refresh_tokens
                     WHERE token = $1
                 """,
@@ -530,6 +551,7 @@ class StorageService:
                 if result:
                     return {
                         "client_id": result["client_id"],
+                        "issuer": result["issuer"],
                         "access_token": result["access_token"],
                         "scope": result["scope"],
                         "expires_at": result["expires_at"].timestamp(),

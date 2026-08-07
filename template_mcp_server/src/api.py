@@ -7,6 +7,7 @@ the MCP server with appropriate transport protocols.
 import json
 import webbrowser
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError, version
 from typing import AsyncGenerator, Callable, Optional
 from urllib.parse import urlparse
 
@@ -30,6 +31,24 @@ server = TemplateMCPServer()
 oauth_service_instance: Optional[OAuthService] = None
 
 _local_development_token: Optional[str] = None
+
+# SEP-2207: scopes_supported MUST NOT include offline_access.
+# Refresh token support is advertised via grant_types_supported instead.
+SCOPES_SUPPORTED = ["template-mcp-server"]
+
+_OFFLINE_ACCESS_SCOPE = "offline_access"
+
+
+def _validate_scopes_no_offline_access(scopes: list) -> None:
+    """SEP-2207: Validate that offline_access is not in scopes_supported."""
+    if _OFFLINE_ACCESS_SCOPE in scopes:
+        raise ValueError(
+            f"SEP-2207: '{_OFFLINE_ACCESS_SCOPE}' must not appear in SCOPES_SUPPORTED. "
+            "Refresh token support is advertised via grant_types_supported."
+        )
+
+
+_validate_scopes_no_offline_access(SCOPES_SUPPORTED)
 
 PUBLIC_PATHS = frozenset(
     {
@@ -66,7 +85,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             storage_service = await initialize_storage()
             logger.info("Storage service initialized successfully")
 
-            oauth_service_instance = OAuthService(storage_service)
+            oauth_service_instance = OAuthService(storage_service, get_host())
             logger.info("OAuth service initialized with dependency injection")
     except Exception as e:
         logger.critical(f"Failed to initialize storage service: {e}")
@@ -221,14 +240,29 @@ def _get_session_secret() -> str:
     return ephemeral_key
 
 
+def _get_session_https_only() -> bool:
+    """Determine whether session cookies require HTTPS."""
+    if settings.SESSION_COOKIE_HTTPS_ONLY is not None:
+        return settings.SESSION_COOKIE_HTTPS_ONLY
+    return getattr(settings, "ENVIRONMENT", "development").lower() != "development"
+
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=_get_session_secret(),
     session_cookie="mcp_session",
-    max_age=60 * 60 * 24,  # 1 day
-    same_site="lax",
-    https_only=False,
+    max_age=settings.SESSION_COOKIE_MAX_AGE,
+    same_site=settings.SESSION_COOKIE_SAME_SITE,
+    https_only=_get_session_https_only(),
 )
+
+
+def _get_version() -> str:
+    """Get the package version from installed metadata."""
+    try:
+        return version("template-mcp-server")
+    except PackageNotFoundError:
+        return "0.0.0-dev"
 
 
 @app.get("/health")
@@ -240,18 +274,33 @@ async def health_check():
             "status": "healthy",
             "service": "template-mcp-server",
             "transport_protocol": settings.MCP_TRANSPORT_PROTOCOL,
-            "version": "0.1.0",
+            "version": _get_version(),
         },
     )
 
 
+_ISSUER_SAFE_DEFAULT = "http://localhost:5001"
+
+TOKEN_ENDPOINT_AUTH_METHODS = [
+    "client_secret_basic",
+    "client_secret_post",
+    "none",
+]
+
+
 def get_host() -> str:
-    """Determine the HOST for OAuth discovery endpoints."""
-    safe_default = "http://localhost:5001"
-    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or safe_default
+    """Determine the canonical issuer/host for OAuth discovery endpoints.
+
+    Checks OAUTH_ISSUER first (explicit override), then derives from
+    MCP_HOST_ENDPOINT origin.
+    """
+    explicit = getattr(settings, "OAUTH_ISSUER", None)
+    if explicit:
+        return explicit
+
+    endpoint = getattr(settings, "MCP_HOST_ENDPOINT", None) or _ISSUER_SAFE_DEFAULT
     try:
         callback_uri = urlparse(endpoint)
-        # Validate that scheme and netloc are present and scheme is http or https
         if (
             callback_uri.scheme in ("http", "https")
             and callback_uri.netloc
@@ -260,16 +309,15 @@ def get_host() -> str:
         ):
             return f"{callback_uri.scheme}://{callback_uri.netloc}"
         else:
-            # Malformed URL: fallback to safe default
             logger.warning(
-                f"Invalid MCP_HOST_ENDPOINT '{endpoint}' for OAuth discovery; falling back to {safe_default}"
+                f"Invalid MCP_HOST_ENDPOINT '{endpoint}' for OAuth discovery; falling back to {_ISSUER_SAFE_DEFAULT}"
             )
-            return safe_default
+            return _ISSUER_SAFE_DEFAULT
     except Exception as e:
         logger.warning(
-            f"Exception parsing MCP_HOST_ENDPOINT '{endpoint}': {e}; falling back to {safe_default}"
+            f"Exception parsing MCP_HOST_ENDPOINT '{endpoint}': {e}; falling back to {_ISSUER_SAFE_DEFAULT}"
         )
-        return safe_default
+        return _ISSUER_SAFE_DEFAULT
 
 
 @app.get("/.well-known/oauth-protected-resource", tags=["OAuth2"])
@@ -282,16 +330,12 @@ async def well_known_oauth_protected_resource():
     return {
         "resource": host,
         "authorization_servers": [host],
-        "scopes_supported": ["template-mcp-server"],
+        "scopes_supported": SCOPES_SUPPORTED,
         "registration_endpoint": f"{host}/auth/register",
         "bearer_methods_supported": ["header"],
         "revocation_endpoint": f"{host}/auth/revoke",
         "introspection_endpoint": f"{host}/auth/introspect",
-        "introspection_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "client_secret_post",
-            "none",
-        ],
+        "introspection_endpoint_auth_methods_supported": TOKEN_ENDPOINT_AUTH_METHODS,
     }
 
 
@@ -308,7 +352,7 @@ async def well_known_oauth_authorization_server():
         "authorization_endpoint": f"{host}/auth/authorize",
         "token_endpoint": f"{host}/auth/token",
         "registration_endpoint": f"{host}/auth/register",
-        "scopes_supported": ["template-mcp-server"],
+        "scopes_supported": SCOPES_SUPPORTED,
         "response_types_supported": ["code"],
         "response_modes_supported": ["query"],
         "grant_types_supported": [
@@ -316,23 +360,11 @@ async def well_known_oauth_authorization_server():
             "refresh_token",
             "client_credentials",
         ],
-        "token_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "client_secret_post",
-            "none",
-        ],
+        "token_endpoint_auth_methods_supported": TOKEN_ENDPOINT_AUTH_METHODS,
         "revocation_endpoint": f"{host}/auth/revoke",
-        "revocation_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "client_secret_post",
-            "none",
-        ],
+        "revocation_endpoint_auth_methods_supported": TOKEN_ENDPOINT_AUTH_METHODS,
         "introspection_endpoint": f"{host}/auth/introspect",
-        "introspection_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "client_secret_post",
-            "none",
-        ],
+        "introspection_endpoint_auth_methods_supported": TOKEN_ENDPOINT_AUTH_METHODS,
         "code_challenge_methods_supported": ["S256"],
     }
 

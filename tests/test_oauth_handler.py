@@ -119,6 +119,7 @@ class TestOAuth2Handler:
         """Test successful token introspection."""
         mock_settings.SSO_CLIENT_ID = "client123"
         mock_settings.SSO_CLIENT_SECRET = "secret123"
+        mock_settings.SSO_INTROSPECTION_TIMEOUT = 10.0
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -258,9 +259,28 @@ class TestOAuth2Handler:
         assert result is None
 
     def test_scope_constant(self):
-        """Test SCOPE constant is correctly defined."""
-        expected_scope = ["email", "openid", "profile", "session:role-any"]
-        assert SCOPE == expected_scope
+        """Test SCOPE constant is loaded from settings."""
+        from template_mcp_server.src.settings import settings
+
+        assert SCOPE == settings.SSO_SCOPES
+
+    @patch("template_mcp_server.src.oauth.handler.settings")
+    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    def test_introspect_uses_configured_timeout(self, mock_post, mock_settings):
+        """Test that introspection uses SSO_INTROSPECTION_TIMEOUT from settings."""
+        mock_settings.SSO_CLIENT_ID = "client123"
+        mock_settings.SSO_CLIENT_SECRET = "secret123"
+        mock_settings.SSO_INTROSPECTION_TIMEOUT = 30.0
+
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"active": True}
+        mock_post.return_value = mock_response
+
+        OAuth2Handler.introspect_token("token123")
+
+        call_kwargs = mock_post.call_args[1]
+        assert call_kwargs["timeout"] == 30.0
 
 
 class TestOAuth2HandlerIntegration:

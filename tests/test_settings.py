@@ -88,6 +88,87 @@ class TestSettings:
         assert hasattr(settings, "PYTHON_LOG_LEVEL")
 
 
+class TestClusterReadySettings:
+    """Test new settings for cluster-ready deployment."""
+
+    def test_session_cookie_https_only_default(self):
+        """Test SESSION_COOKIE_HTTPS_ONLY defaults to None (auto-detect)."""
+        settings = Settings()
+        assert settings.SESSION_COOKIE_HTTPS_ONLY is None
+
+    def test_session_cookie_https_only_from_env(self):
+        """Test SESSION_COOKIE_HTTPS_ONLY can be set via environment."""
+        with patch.dict(os.environ, {"SESSION_COOKIE_HTTPS_ONLY": "true"}):
+            settings = Settings()
+            assert settings.SESSION_COOKIE_HTTPS_ONLY is True
+
+    def test_session_cookie_same_site_default(self):
+        """Test SESSION_COOKIE_SAME_SITE defaults to lax."""
+        settings = Settings()
+        assert settings.SESSION_COOKIE_SAME_SITE == "lax"
+
+    def test_session_cookie_same_site_from_env(self):
+        """Test SESSION_COOKIE_SAME_SITE can be set to strict."""
+        with patch.dict(os.environ, {"SESSION_COOKIE_SAME_SITE": "strict"}):
+            settings = Settings()
+            assert settings.SESSION_COOKIE_SAME_SITE == "strict"
+
+    def test_session_cookie_max_age_default(self):
+        """Test SESSION_COOKIE_MAX_AGE defaults to 86400 (1 day)."""
+        settings = Settings()
+        assert settings.SESSION_COOKIE_MAX_AGE == 86400
+
+    def test_session_cookie_max_age_from_env(self):
+        """Test SESSION_COOKIE_MAX_AGE can be set via environment."""
+        with patch.dict(os.environ, {"SESSION_COOKIE_MAX_AGE": "3600"}):
+            settings = Settings()
+            assert settings.SESSION_COOKIE_MAX_AGE == 3600
+
+    def test_access_token_expiry_default(self):
+        """Test ACCESS_TOKEN_EXPIRY defaults to 3600 (1 hour)."""
+        settings = Settings()
+        assert settings.ACCESS_TOKEN_EXPIRY == 3600
+
+    def test_access_token_expiry_from_env(self):
+        """Test ACCESS_TOKEN_EXPIRY can be set via environment."""
+        with patch.dict(os.environ, {"ACCESS_TOKEN_EXPIRY": "7200"}):
+            settings = Settings()
+            assert settings.ACCESS_TOKEN_EXPIRY == 7200
+
+    def test_sso_scopes_default(self):
+        """Test SSO_SCOPES defaults to standard OIDC scopes."""
+        settings = Settings()
+        assert settings.SSO_SCOPES == ["email", "openid", "profile"]
+
+    def test_sso_scopes_from_env(self):
+        """Test SSO_SCOPES can be overridden via environment."""
+        with patch.dict(os.environ, {"SSO_SCOPES": '["openid","custom"]'}):
+            settings = Settings()
+            assert settings.SSO_SCOPES == ["openid", "custom"]
+
+    def test_sso_introspection_timeout_default(self):
+        """Test SSO_INTROSPECTION_TIMEOUT defaults to 10.0."""
+        settings = Settings()
+        assert settings.SSO_INTROSPECTION_TIMEOUT == 10.0
+
+    def test_sso_introspection_timeout_from_env(self):
+        """Test SSO_INTROSPECTION_TIMEOUT can be set via environment."""
+        with patch.dict(os.environ, {"SSO_INTROSPECTION_TIMEOUT": "30.0"}):
+            settings = Settings()
+            assert settings.SSO_INTROSPECTION_TIMEOUT == 30.0
+
+    def test_oauth_issuer_default(self):
+        """Test OAUTH_ISSUER defaults to None (derive from MCP_HOST_ENDPOINT)."""
+        settings = Settings()
+        assert settings.OAUTH_ISSUER is None
+
+    def test_oauth_issuer_from_env(self):
+        """Test OAUTH_ISSUER can be set via environment."""
+        with patch.dict(os.environ, {"OAUTH_ISSUER": "https://auth.example.com"}):
+            settings = Settings()
+            assert settings.OAUTH_ISSUER == "https://auth.example.com"
+
+
 class TestValidateConfig:
     """Test the validate_config function."""
 
@@ -161,3 +242,24 @@ class TestValidateConfig:
             settings = Settings()
             settings.MCP_TRANSPORT_PROTOCOL = protocol
             validate_config(settings)  # Should not raise
+
+
+class TestLoadDotenvFallback:
+    """Test that settings module handles load_dotenv failure gracefully."""
+
+    def test_load_dotenv_exception_is_caught(self):
+        """Test settings module loads even when load_dotenv raises."""
+        import importlib
+        import sys
+
+        with patch("dotenv.load_dotenv", side_effect=OSError("permission denied")):
+            # Remove cached module so reload re-executes module body
+            mod_key = "template_mcp_server.src.settings"
+            saved = sys.modules.pop(mod_key, None)
+            try:
+                mod = importlib.import_module(mod_key)
+                assert hasattr(mod, "Settings")
+                assert hasattr(mod, "settings")
+            finally:
+                if saved is not None:
+                    sys.modules[mod_key] = saved
