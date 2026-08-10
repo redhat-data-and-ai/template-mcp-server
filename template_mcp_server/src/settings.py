@@ -134,6 +134,14 @@ class Settings(BaseSettings):
             "example": ["*"],
         },
     )
+    ENABLE_JINJA2_SECURITY: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "ENABLE_JINJA2_SECURITY",
+            "description": "Enable Jinja2 template injection safeguards for user input",
+            "example": True,
+        },
+    )
     SSO_CLIENT_ID: str = Field(
         default="",
         json_schema_extra={
