@@ -195,7 +195,9 @@ class TestStorageServiceTables:
         await service._create_table()
 
         # Should call execute multiple times for table and index creation
-        assert mock_conn.execute.call_count >= 4  # 4 tables + indexes
+        assert (
+            mock_conn.execute.call_count >= 5
+        )  # 4 tables + indexes (including idx_clients_issuer)
 
     @pytest.mark.asyncio
     async def test_create_table_no_pool(self):
@@ -268,6 +270,8 @@ class TestClientMethods:
             "grant_types": '["authorization_code"]',
             "response_types": '["code"]',
             "scope": "read write",
+            "issuer": "http://localhost:5001",
+            "application_type": "native",
             "created_at": datetime.now(timezone.utc),
         }
         mock_conn.fetchrow.return_value = mock_result
@@ -290,12 +294,13 @@ class TestClientMethods:
         service.pool = mock_pool
 
         result = await service.get_client_by_name_and_redirect_uris(
-            "Test Client", ["http://localhost:3000"]
+            "Test Client", ["http://localhost:3000"], "http://localhost:5001"
         )
 
         assert result["id"] == "client123"
         assert result["name"] == "Test Client"
         assert result["redirect_uris"] == ["http://localhost:3000"]
+        assert result["application_type"] == "native"
 
     @pytest.mark.asyncio
     async def test_get_client_by_name_and_redirect_uris_not_found(self):
@@ -322,7 +327,7 @@ class TestClientMethods:
         service.pool = mock_pool
 
         result = await service.get_client_by_name_and_redirect_uris(
-            "Non-existent Client", ["http://localhost:3000"]
+            "Non-existent Client", ["http://localhost:3000"], "http://localhost:5001"
         )
 
         assert result is None
@@ -333,7 +338,7 @@ class TestClientMethods:
         service = StorageService()
 
         result = await service.get_client_by_name_and_redirect_uris(
-            "Test Client", ["http://localhost:3000"]
+            "Test Client", ["http://localhost:3000"], "http://localhost:5001"
         )
 
         assert result is None
@@ -363,7 +368,7 @@ class TestClientMethods:
         service.pool = mock_pool
 
         result = await service.get_client_by_name_and_redirect_uris(
-            "Test Client", ["http://localhost:3000"]
+            "Test Client", ["http://localhost:3000"], "http://localhost:5001"
         )
 
         assert result is None
@@ -399,19 +404,67 @@ class TestClientMethods:
             "grant_types": ["authorization_code"],
             "response_types": ["code"],
             "scope": "read write",
+            "issuer": "http://localhost:5001",
         }
 
         result = await service.store_client(client_data)
 
         assert result is True
         mock_conn.execute.assert_called_once()
+        call_args = mock_conn.execute.call_args[0]
+        assert call_args[9] == "web"
+
+    @pytest.mark.asyncio
+    async def test_store_client_with_application_type(self):
+        """Test that store_client persists application_type."""
+        service = StorageService()
+        mock_conn = AsyncMock()
+        mock_pool = AsyncMock()
+
+        class AsyncContextManagerMock:
+            def __init__(self, return_value):
+                self.return_value = return_value
+
+            async def __aenter__(self):
+                return self.return_value
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        def acquire():
+            return AsyncContextManagerMock(mock_conn)
+
+        mock_pool.acquire = acquire
+        service.pool = mock_pool
+
+        client_data = {
+            "id": "client123",
+            "secret": "secret123",
+            "name": "Test Client",
+            "redirect_uris": ["http://localhost:3000"],
+            "grant_types": ["authorization_code"],
+            "response_types": ["code"],
+            "scope": "read write",
+            "issuer": "http://localhost:5001",
+            "application_type": "native",
+        }
+
+        result = await service.store_client(client_data)
+
+        assert result is True
+        call_args = mock_conn.execute.call_args[0]
+        assert call_args[9] == "native"
 
     @pytest.mark.asyncio
     async def test_store_client_no_pool(self):
         """Test client storage without pool."""
         service = StorageService()
 
-        client_data = {"id": "client123", "secret": "secret123"}
+        client_data = {
+            "id": "client123",
+            "secret": "secret123",
+            "issuer": "http://localhost:5001",
+        }
         result = await service.store_client(client_data)
 
         assert result is False
@@ -440,7 +493,11 @@ class TestClientMethods:
         mock_pool.acquire = acquire
         service.pool = mock_pool
 
-        client_data = {"id": "client123", "secret": "secret123"}
+        client_data = {
+            "id": "client123",
+            "secret": "secret123",
+            "issuer": "http://localhost:5001",
+        }
         result = await service.store_client(client_data)
 
         assert result is False
@@ -458,6 +515,8 @@ class TestClientMethods:
             "grant_types": '["authorization_code"]',
             "response_types": '["code"]',
             "scope": "read write",
+            "issuer": "http://localhost:5001",
+            "application_type": "native",
             "created_at": datetime.now(timezone.utc),
         }
         mock_conn.fetchrow.return_value = mock_result
@@ -479,10 +538,11 @@ class TestClientMethods:
         mock_pool.acquire = acquire
         service.pool = mock_pool
 
-        result = await service.get_client("client123")
+        result = await service.get_client("client123", "http://localhost:5001")
 
         assert result["id"] == "client123"
         assert result["name"] == "Test Client"
+        assert result["application_type"] == "native"
 
     @pytest.mark.asyncio
     async def test_get_client_not_found(self):
@@ -508,7 +568,7 @@ class TestClientMethods:
         mock_pool.acquire = acquire
         service.pool = mock_pool
 
-        result = await service.get_client("client123")
+        result = await service.get_client("client123", "http://localhost:5001")
 
         assert result is None
 
@@ -547,6 +607,7 @@ class TestAuthorizationCodeMethods:
             "code_challenge_method": "S256",
             "expires_at": time.time() + 600,
             "state": "state_123",
+            "issuer": "http://localhost:5001",
         }
 
         result = await service.store_authorization_code("code123", code_data)
@@ -569,6 +630,7 @@ class TestAuthorizationCodeMethods:
             "snowflake_token": '{"access_token": "token123"}',
             "expires_at": datetime.now(timezone.utc),
             "state": "state_123",
+            "issuer": "http://localhost:5001",
         }
         mock_conn.fetchrow.return_value = mock_result
         mock_pool = AsyncMock()
@@ -609,6 +671,7 @@ class TestAuthorizationCodeMethods:
             "snowflake_token": None,
             "expires_at": datetime.now(timezone.utc),
             "state": "state_123",
+            "issuer": "http://localhost:5001",
         }
         mock_conn.fetchrow.return_value = mock_result
         mock_pool = AsyncMock()
@@ -754,6 +817,7 @@ class TestAccessTokenMethods:
             "client_id": "client123",
             "scope": "read write",
             "expires_at": time.time() + 3600,
+            "issuer": "http://localhost:5001",
         }
 
         result = await service.store_access_token("token123", token_data)
@@ -772,6 +836,7 @@ class TestAccessTokenMethods:
             "scope": "read write",
             "token_type": "Bearer",
             "expires_at": datetime.now(timezone.utc),
+            "issuer": "http://localhost:5001",
         }
         mock_conn.fetchrow.return_value = mock_result
         mock_pool = AsyncMock()
@@ -858,6 +923,7 @@ class TestRefreshTokenMethods:
             "access_token": "access123",
             "scope": "read write",
             "expires_at": time.time() + 86400,
+            "issuer": "http://localhost:5001",
         }
 
         result = await service.store_refresh_token("refresh123", token_data)
@@ -876,6 +942,7 @@ class TestRefreshTokenMethods:
             "access_token": "access123",
             "scope": "read write",
             "expires_at": datetime.now(timezone.utc),
+            "issuer": "http://localhost:5001",
         }
         mock_conn.fetchrow.return_value = mock_result
         mock_pool = AsyncMock()
@@ -931,6 +998,224 @@ class TestRefreshTokenMethods:
         mock_conn.execute.assert_called_once()
 
 
+class TestNoPoolAndExceptionBranches:
+    """Cover all no-pool guards and exception handlers in storage methods."""
+
+    class _AcquireMock:
+        def __init__(self, conn):
+            self._conn = conn
+
+        async def __aenter__(self):
+            return self._conn
+
+        async def __aexit__(self, *a):
+            return None
+
+    def _service_with_pool(self, mock_conn):
+        service = StorageService()
+        mock_pool = AsyncMock()
+        mock_pool.acquire = lambda: self._AcquireMock(mock_conn)
+        service.pool = mock_pool
+        return service
+
+    # --- get_client ---
+
+    @pytest.mark.asyncio
+    async def test_get_client_no_pool(self):
+        service = StorageService()
+        assert await service.get_client("c", "iss") is None
+
+    @pytest.mark.asyncio
+    async def test_get_client_exception(self):
+        conn = AsyncMock()
+        conn.fetchrow.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.get_client("c", "iss") is None
+
+    # --- store_authorization_code ---
+
+    @pytest.mark.asyncio
+    async def test_store_authorization_code_no_pool(self):
+        service = StorageService()
+        assert await service.store_authorization_code("c", {}) is False
+
+    @pytest.mark.asyncio
+    async def test_store_authorization_code_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        code_data = {
+            "client_id": "c",
+            "issuer": "iss",
+            "redirect_uri": "http://x",
+            "code_challenge": "ch",
+            "code_challenge_method": "S256",
+            "expires_at": time.time() + 600,
+            "state": "s",
+        }
+        assert await service.store_authorization_code("code", code_data) is False
+
+    # --- get_authorization_code ---
+
+    @pytest.mark.asyncio
+    async def test_get_authorization_code_no_pool(self):
+        service = StorageService()
+        assert await service.get_authorization_code("c") is None
+
+    @pytest.mark.asyncio
+    async def test_get_authorization_code_exception(self):
+        conn = AsyncMock()
+        conn.fetchrow.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.get_authorization_code("c") is None
+
+    # --- update_authorization_code_token ---
+
+    @pytest.mark.asyncio
+    async def test_update_authorization_code_token_no_pool(self):
+        service = StorageService()
+        assert await service.update_authorization_code_token("c", {}) is False
+
+    @pytest.mark.asyncio
+    async def test_update_authorization_code_token_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.update_authorization_code_token("c", {"k": "v"}) is False
+
+    # --- delete_authorization_code ---
+
+    @pytest.mark.asyncio
+    async def test_delete_authorization_code_no_pool(self):
+        service = StorageService()
+        assert await service.delete_authorization_code("c") is False
+
+    @pytest.mark.asyncio
+    async def test_delete_authorization_code_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.delete_authorization_code("c") is False
+
+    # --- store_access_token ---
+
+    @pytest.mark.asyncio
+    async def test_store_access_token_no_pool(self):
+        service = StorageService()
+        assert await service.store_access_token("t", {}) is False
+
+    @pytest.mark.asyncio
+    async def test_store_access_token_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        token_data = {
+            "client_id": "c",
+            "issuer": "iss",
+            "expires_at": time.time() + 600,
+        }
+        assert await service.store_access_token("t", token_data) is False
+
+    # --- get_access_token ---
+
+    @pytest.mark.asyncio
+    async def test_get_access_token_no_pool(self):
+        service = StorageService()
+        assert await service.get_access_token("t") is None
+
+    @pytest.mark.asyncio
+    async def test_get_access_token_exception(self):
+        conn = AsyncMock()
+        conn.fetchrow.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.get_access_token("t") is None
+
+    # --- delete_access_token ---
+
+    @pytest.mark.asyncio
+    async def test_delete_access_token_no_pool(self):
+        service = StorageService()
+        assert await service.delete_access_token("t") is False
+
+    @pytest.mark.asyncio
+    async def test_delete_access_token_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.delete_access_token("t") is False
+
+    # --- store_refresh_token ---
+
+    @pytest.mark.asyncio
+    async def test_store_refresh_token_no_pool(self):
+        service = StorageService()
+        assert await service.store_refresh_token("t", {}) is False
+
+    @pytest.mark.asyncio
+    async def test_store_refresh_token_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        token_data = {
+            "client_id": "c",
+            "issuer": "iss",
+            "access_token": "at",
+            "expires_at": time.time() + 600,
+        }
+        assert await service.store_refresh_token("t", token_data) is False
+
+    # --- get_refresh_token ---
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token_no_pool(self):
+        service = StorageService()
+        assert await service.get_refresh_token("t") is None
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token_exception(self):
+        conn = AsyncMock()
+        conn.fetchrow.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.get_refresh_token("t") is None
+
+    # --- not-found paths (return None after if result:) ---
+
+    @pytest.mark.asyncio
+    async def test_get_authorization_code_not_found(self):
+        conn = AsyncMock()
+        conn.fetchrow.return_value = None
+        service = self._service_with_pool(conn)
+        assert await service.get_authorization_code("missing") is None
+
+    @pytest.mark.asyncio
+    async def test_get_access_token_not_found(self):
+        conn = AsyncMock()
+        conn.fetchrow.return_value = None
+        service = self._service_with_pool(conn)
+        assert await service.get_access_token("missing") is None
+
+    @pytest.mark.asyncio
+    async def test_get_refresh_token_not_found(self):
+        conn = AsyncMock()
+        conn.fetchrow.return_value = None
+        service = self._service_with_pool(conn)
+        assert await service.get_refresh_token("missing") is None
+
+    # --- delete_refresh_token ---
+
+    @pytest.mark.asyncio
+    async def test_delete_refresh_token_no_pool(self):
+        service = StorageService()
+        assert await service.delete_refresh_token("t") is False
+
+    @pytest.mark.asyncio
+    async def test_delete_refresh_token_exception(self):
+        conn = AsyncMock()
+        conn.execute.side_effect = Exception("db error")
+        service = self._service_with_pool(conn)
+        assert await service.delete_refresh_token("t") is False
+
+
 class TestStorageServiceIntegration:
     """Integration tests for StorageService."""
 
@@ -972,6 +1257,8 @@ class TestStorageServiceIntegration:
                     "grant_types": '["authorization_code"]',
                     "response_types": '["code"]',
                     "scope": "read write",
+                    "issuer": "http://localhost:5001",
+                    "application_type": "native",
                     "created_at": datetime.now(timezone.utc),
                 }
             elif (
@@ -991,6 +1278,7 @@ class TestStorageServiceIntegration:
                     "snowflake_token": None,
                     "expires_at": datetime.now(timezone.utc),
                     "state": "test_state_123",
+                    "issuer": "http://localhost:5001",
                 }
             return None
 
@@ -1006,6 +1294,7 @@ class TestStorageServiceIntegration:
             "grant_types": ["authorization_code"],
             "response_types": ["code"],
             "scope": "read write",
+            "issuer": "http://localhost:5001",
         }
 
         # Store client
@@ -1013,7 +1302,7 @@ class TestStorageServiceIntegration:
         assert result is True
 
         # Get client
-        client = await service.get_client("client123")
+        client = await service.get_client("client123", "http://localhost:5001")
         assert client["id"] == "client123"
 
         # Test authorization code operations
@@ -1025,6 +1314,7 @@ class TestStorageServiceIntegration:
             "code_challenge_method": "S256",
             "expires_at": time.time() + 600,
             "state": "test_state_123",
+            "issuer": "http://localhost:5001",
         }
 
         # Store authorization code

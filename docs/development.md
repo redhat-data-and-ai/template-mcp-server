@@ -75,7 +75,7 @@ The server configuration is managed through environment variables:
 | ----------------------------- | ------------------------- | ------------------------------------------------------------------------- |
 | `MCP_HOST`                  | `localhost`             | Server bind address                                                       |
 | `MCP_PORT`                  | `5001`                  | Server port (1024-65535)                                                  |
-| `MCP_TRANSPORT_PROTOCOL`    | `http`                  | Transport protocol (`http`, `sse`, `streamable-http`)               |
+| `MCP_TRANSPORT_PROTOCOL`    | `streamable-http`       | Transport protocol (`streamable-http`, `stdio`)                     |
 | `MCP_HOST_ENDPOINT`         | `http://localhost:5001` | Public-facing host URL (used in OAuth discovery responses)                |
 | `MCP_SSL_KEYFILE`           | `None`                  | SSL private key file path                                                 |
 | `MCP_SSL_CERTFILE`          | `None`                  | SSL certificate file path                                                 |

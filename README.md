@@ -16,7 +16,7 @@ A production-ready template for building Model Context Protocol (MCP) servers wi
 - `send_email` - Email delivery via Resend API
 
 **Infrastructure:**
-- Multiple transport protocols (HTTP, SSE, streamable-HTTP)
+- Transport protocols: Streamable HTTP and stdio
 - Structured JSON logging with structlog
 - OAuth authentication + PostgreSQL token storage
 - SSL/TLS support
@@ -109,7 +109,7 @@ The output should be empty (or only match this README section itself).
 |----------|---------|-------------|
 | `MCP_HOST` | `localhost` | Server bind address |
 | `MCP_PORT` | `5001` | Server port (1024-65535) |
-| `MCP_TRANSPORT_PROTOCOL` | `http` | Transport protocol (`http`, `sse`, `streamable-http`) |
+| `MCP_TRANSPORT_PROTOCOL` | `streamable-http` | Transport protocol (`streamable-http`, `stdio`) |
 | `MCP_HOST_ENDPOINT` | `http://localhost:5001` | Public base URL (used for OAuth callbacks) |
 | `MCP_SSL_KEYFILE` | `None` | SSL private key file path |
 | `MCP_SSL_CERTFILE` | `None` | SSL certificate file path |

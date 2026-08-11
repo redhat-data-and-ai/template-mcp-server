@@ -61,8 +61,7 @@ body:
       description: Which transport protocol are you using?
       options:
         - streamable-http
-        - sse
-        - http
+        - stdio
         - Not applicable
     validations:
       required: true

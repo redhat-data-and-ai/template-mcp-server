@@ -1,4 +1,6 @@
-"""Tests for the validate_email MCP tool."""
+"""Tests for the validate_email MCP tool and email sending tool."""
+
+from unittest.mock import patch
 
 from template_mcp_server.src.tools.validate_email_tool import validate_email
 
@@ -167,3 +169,38 @@ class TestValidateEmail:
         assert "reason" in result
         assert "message" in result
         assert result["operation"] == "email_validation"
+
+
+class TestEmailToolFromEmailValidation:
+    """Test that RESEND_FROM_EMAIL is required (no hardcoded fallback)."""
+
+    @patch("template_mcp_server.src.tools.email_tool.settings")
+    def test_missing_from_email_returns_error(self, mock_settings):
+        """Test that missing RESEND_FROM_EMAIL returns an error instead of using hardcoded fallback."""
+        from template_mcp_server.src.tools.email_tool import invoke_email_agent
+
+        mock_settings.RESEND_API_KEY = "test_api_key"
+        mock_settings.RESEND_FROM_EMAIL = ""
+        mock_settings.RESEND_TO_EMAIL = ""
+
+        result = invoke_email_agent("user@example.com", "Test", "<p>Hello</p>")
+
+        assert "Error" in result
+        assert "RESEND_FROM_EMAIL" in result
+
+    @patch("template_mcp_server.src.tools.email_tool.settings")
+    def test_configured_from_email_is_used(self, mock_settings):
+        """Test that configured RESEND_FROM_EMAIL is used when set."""
+        from template_mcp_server.src.tools.email_tool import invoke_email_agent
+
+        mock_settings.RESEND_API_KEY = "test_api_key"
+        mock_settings.RESEND_FROM_EMAIL = "noreply@mycompany.com"
+        mock_settings.RESEND_TO_EMAIL = ""
+
+        with patch("template_mcp_server.src.tools.email_tool.resend") as mock_resend:
+            mock_resend.Emails.send.return_value = {"id": "123"}
+            result = invoke_email_agent("user@example.com", "Test", "<p>Hello</p>")
+
+            call_args = mock_resend.Emails.send.call_args[0][0]
+            assert call_args["from"] == "noreply@mycompany.com"
+            assert "successfully" in result

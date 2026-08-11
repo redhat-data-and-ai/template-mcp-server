@@ -1,12 +1,12 @@
 """Main entry point for the Template MCP Server."""
 
+import asyncio
 import sys
 import warnings
 from typing import Any, NoReturn
 
 import uvicorn
 
-from template_mcp_server.src.api import app
 from template_mcp_server.src.settings import settings
 from template_mcp_server.src.settings import validate_config as validate_config_func
 from template_mcp_server.utils.pylogger import get_python_logger, get_uvicorn_log_config
@@ -112,23 +112,31 @@ def main() -> None:
             f"Server configured to use {settings.MCP_TRANSPORT_PROTOCOL} protocol"
         )
 
-        uvicorn_config: dict[str, Any] = {}
-        if settings.MCP_SSL_KEYFILE and settings.MCP_SSL_CERTFILE:
-            uvicorn_config["ssl_keyfile"] = settings.MCP_SSL_KEYFILE
-            uvicorn_config["ssl_certfile"] = settings.MCP_SSL_CERTFILE
-            logger.info(
-                "Starting server with SSL",
-                ssl_keyfile=settings.MCP_SSL_KEYFILE,
-                ssl_certfile=settings.MCP_SSL_CERTFILE,
-            )
+        if settings.MCP_TRANSPORT_PROTOCOL == "stdio":
+            from template_mcp_server.src.mcp import TemplateMCPServer
 
-        uvicorn.run(
-            app,
-            host=settings.MCP_HOST,
-            port=settings.MCP_PORT,
-            log_config=get_uvicorn_log_config(settings.PYTHON_LOG_LEVEL),
-            **uvicorn_config,
-        )
+            server = TemplateMCPServer()
+            asyncio.run(server.mcp.run_stdio_async())
+        else:
+            from template_mcp_server.src.api import app
+
+            uvicorn_config: dict[str, Any] = {}
+            if settings.MCP_SSL_KEYFILE and settings.MCP_SSL_CERTFILE:
+                uvicorn_config["ssl_keyfile"] = settings.MCP_SSL_KEYFILE
+                uvicorn_config["ssl_certfile"] = settings.MCP_SSL_CERTFILE
+                logger.info(
+                    "Starting server with SSL",
+                    ssl_keyfile=settings.MCP_SSL_KEYFILE,
+                    ssl_certfile=settings.MCP_SSL_CERTFILE,
+                )
+
+            uvicorn.run(
+                app,
+                host=settings.MCP_HOST,
+                port=settings.MCP_PORT,
+                log_config=get_uvicorn_log_config(settings.PYTHON_LOG_LEVEL),
+                **uvicorn_config,
+            )
 
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down")

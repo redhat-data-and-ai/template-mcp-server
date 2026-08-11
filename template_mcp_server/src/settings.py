@@ -61,12 +61,12 @@ class Settings(BaseSettings):
         },
     )
     MCP_TRANSPORT_PROTOCOL: str = Field(
-        default="http",
+        default="streamable-http",
         json_schema_extra={
             "env": "MCP_TRANSPORT_PROTOCOL",
             "description": "Transport protocol for the MCP server",
             "example": "streamable-http",
-            "enum": ["streamable-http", "sse", "http"],
+            "enum": ["streamable-http", "stdio"],
         },
     )
     PYTHON_LOG_LEVEL: str = Field(
@@ -278,6 +278,73 @@ class Settings(BaseSettings):
         },
     )
 
+    # Session Cookie Configuration
+    SESSION_COOKIE_HTTPS_ONLY: Optional[bool] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "SESSION_COOKIE_HTTPS_ONLY",
+            "description": "Require HTTPS for session cookies. Auto-detected from ENVIRONMENT if not set (True in production, False in development).",
+            "example": True,
+        },
+    )
+    SESSION_COOKIE_SAME_SITE: str = Field(
+        default="lax",
+        json_schema_extra={
+            "env": "SESSION_COOKIE_SAME_SITE",
+            "description": "SameSite attribute for session cookies",
+            "example": "lax",
+            "enum": ["strict", "lax", "none"],
+        },
+    )
+    SESSION_COOKIE_MAX_AGE: int = Field(
+        default=86400,
+        ge=60,
+        le=604800,
+        json_schema_extra={
+            "env": "SESSION_COOKIE_MAX_AGE",
+            "description": "Session cookie max age in seconds (default 86400 = 1 day)",
+            "example": 86400,
+        },
+    )
+
+    # OAuth Token Configuration
+    OAUTH_ISSUER: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "OAUTH_ISSUER",
+            "description": "OAuth authorization server issuer identifier (RFC 8414). Defaults to MCP_HOST_ENDPOINT origin if not set.",
+            "example": "https://mcp.example.com",
+        },
+    )
+    ACCESS_TOKEN_EXPIRY: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        json_schema_extra={
+            "env": "ACCESS_TOKEN_EXPIRY",
+            "description": "Access token expiry time in seconds (default 3600 = 1 hour)",
+            "example": 3600,
+        },
+    )
+    SSO_SCOPES: List[str] = Field(
+        default=["email", "openid", "profile"],
+        json_schema_extra={
+            "env": "SSO_SCOPES",
+            "description": "OAuth scopes to request from the upstream SSO provider",
+            "example": ["email", "openid", "profile"],
+        },
+    )
+    SSO_INTROSPECTION_TIMEOUT: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=60.0,
+        json_schema_extra={
+            "env": "SSO_INTROSPECTION_TIMEOUT",
+            "description": "Timeout in seconds for SSO token introspection requests",
+            "example": 10.0,
+        },
+    )
+
     # Web Search (Tavily) Configuration
     TAVILY_API_KEY: str = Field(
         default="",
@@ -344,6 +411,75 @@ class Settings(BaseSettings):
         },
     )
 
+    # Tool Cache Configuration (SEP-2549)
+    TOOL_CACHE_TTL_MS: int = Field(
+        default=300000,
+        ge=0,
+        le=86400000,
+        json_schema_extra={
+            "env": "TOOL_CACHE_TTL_MS",
+            "description": "TTL in milliseconds for tools/list cache (default 300000 = 5 minutes). Set to 0 to disable caching.",
+            "example": 300000,
+        },
+    )
+    TOOL_CACHE_SCOPE: str = Field(
+        default="public",
+        json_schema_extra={
+            "env": "TOOL_CACHE_SCOPE",
+            "description": "Cache scope for tools/list responses",
+            "example": "public",
+            "enum": ["public", "private"],
+        },
+    )
+
+    # Stateless MCP Configuration (SEP-2567, SEP-2575)
+    MCP_STATELESS_HTTP: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_STATELESS_HTTP",
+            "description": "Enable stateless HTTP mode (no Mcp-Session-Id tracking). Per SEP-2567.",
+            "example": True,
+        },
+    )
+    MCP_PROTOCOL_VERSION: str = Field(
+        default="2026-07-28",
+        json_schema_extra={
+            "env": "MCP_PROTOCOL_VERSION",
+            "description": "MCP protocol version advertised in server/discover responses",
+            "example": "2026-07-28",
+        },
+    )
+
+    # W3C Trace Context (SEP-414)
+    MCP_TRACE_CONTEXT_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_TRACE_CONTEXT_ENABLED",
+            "description": "Enable W3C Trace Context propagation (traceparent, tracestate, baggage) in MCP requests",
+            "example": True,
+        },
+    )
+
+    # Extensions Framework (SEP-2133)
+    MCP_EXTENSIONS_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_EXTENSIONS_ENABLED",
+            "description": "Enable MCP extensions framework (SEP-2133). Advertises registered extensions in server/discover.",
+            "example": True,
+        },
+    )
+
+    # Multi Round-Trip Requests (SEP-2322)
+    MCP_MRTR_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_MRTR_ENABLED",
+            "description": "Enable multi round-trip request flow for tools that require user confirmation before executing (SEP-2322).",
+            "example": True,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.
@@ -371,7 +507,7 @@ def validate_config(settings: Settings) -> None:
         )
 
     # Validate transport protocol
-    valid_transport_protocols = ["streamable-http", "sse", "http"]
+    valid_transport_protocols = ["streamable-http", "stdio"]
     if settings.MCP_TRANSPORT_PROTOCOL not in valid_transport_protocols:
         raise ValueError(
             f"MCP_TRANSPORT_PROTOCOL must be one of {valid_transport_protocols}, got {settings.MCP_TRANSPORT_PROTOCOL}"

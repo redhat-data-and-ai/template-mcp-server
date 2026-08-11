@@ -11,6 +11,20 @@ from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"type": "string", "enum": ["success", "error"]},
+        "operation": {"type": "string"},
+        "email": {"type": "string"},
+        "valid": {"type": "boolean"},
+        "reason": {"type": "string"},
+        "message": {"type": "string"},
+        "error": {"type": "string"},
+    },
+    "required": ["status", "message"],
+}
+
 # RFC 5322 compliant email regex pattern (simplified)
 EMAIL_PATTERN = re.compile(
     r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"

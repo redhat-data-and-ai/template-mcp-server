@@ -8,6 +8,8 @@ This module provides HTTP endpoints for OAuth 2.0 operations including:
 """
 
 import base64
+import secrets
+import time
 from typing import Any, Dict
 from urllib.parse import urlencode, urlparse
 
@@ -22,16 +24,45 @@ from .handler import OAuth2Handler
 from .models import (
     AuthorizationCodeTokenRequest,
     ClientCredentialsTokenRequest,
+    ClientMetadataResponse,
     ClientRegistrationRequest,
     ClientRegistrationResponse,
     RefreshTokenRequest,
+    TokenRequestBase,
 )
-from .service import OAuthService, verify_code_challenge
+from .service import OAuthService, get_current_issuer, verify_code_challenge
 
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
 if settings.USE_EXTERNAL_BROWSER_AUTH:
     import template_mcp_server.src.api as api_module
+
+
+async def _validate_client_credentials(
+    token_request: TokenRequestBase, oauth_service: OAuthService
+) -> None:
+    """Validate client credentials when COMPATIBLE_WITH_CURSOR is disabled."""
+    if settings.COMPATIBLE_WITH_CURSOR:
+        return
+    if token_request.client_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_client",
+                "error_description": "Client ID is required",
+            },
+        )
+    client = await oauth_service.validate_client(
+        token_request.client_id, token_request.client_secret
+    )
+    if not client:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_client",
+                "error_description": "Invalid client credentials",
+            },
+        )
 
 
 async def handle_callback(request: Request, oauth_service: OAuthService) -> Response:
@@ -88,6 +119,7 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
     query_dict = {
         "code": code_from_session,
         "state": state_from_session,
+        "iss": get_current_issuer(),
     }
     redirect_url_str = f"{redirect_url.scheme}://{redirect_url.netloc}{redirect_url.path}?{urlencode(query_dict)}"
     return RedirectResponse(url=redirect_url_str, status_code=302)
@@ -309,27 +341,17 @@ async def handle_authorization_code_grant(
             },
         )
 
-    # Validate client credentials
-    if not settings.COMPATIBLE_WITH_CURSOR:
-        if token_request.client_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Client ID is required",
-                },
-            )
-        client = await oauth_service.validate_client(
-            token_request.client_id, token_request.client_secret
+    # SEP-2352: Verify the auth code was issued by this AS
+    if code_data.get("issuer") != oauth_service.issuer:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_grant",
+                "error_description": "Authorization code was issued by a different authorization server",
+            },
         )
-        if not client:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client credentials",
-                },
-            )
+
+    await _validate_client_credentials(token_request, oauth_service)
 
     # Verify redirect URI matches
     if token_request.redirect_uri != code_data["redirect_uri"]:
@@ -357,22 +379,34 @@ async def handle_authorization_code_grant(
     # Mark the code as used
     await oauth_service.mark_code_as_used(token_request.code)
 
-    # Return OAuth response with Snowflake tokens if available
+    scope = code_data.get("scope", "read")
+    expires_in = settings.ACCESS_TOKEN_EXPIRY
+
+    # Use upstream SSO tokens if available, otherwise generate a local token
+    snowflake_tokens = code_data.get("snowflake_token", {})
+    if snowflake_tokens and snowflake_tokens.get("access_token"):
+        access_token = snowflake_tokens["access_token"]
+    else:
+        access_token = secrets.token_urlsafe(32)
+
+    await oauth_service.store_access_token(
+        access_token,
+        {
+            "client_id": code_data["client_id"],
+            "scope": scope,
+            "expires_at": time.time() + expires_in,
+        },
+    )
+
     oauth_response = {
-        "access_token": "oauth_access_token_placeholder",
+        "access_token": access_token,
         "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": code_data.get("scope", "read"),
+        "expires_in": expires_in,
+        "scope": scope,
     }
 
-    # Include Snowflake tokens if available from the code
-    snowflake_tokens = code_data.get("snowflake_token", {})
-    if snowflake_tokens:
-        oauth_response["access_token"] = snowflake_tokens.get(
-            "access_token", oauth_response["access_token"]
-        )
-        if "refresh_token" in snowflake_tokens:
-            oauth_response["refresh_token"] = snowflake_tokens.get("refresh_token")
+    if snowflake_tokens and "refresh_token" in snowflake_tokens:
+        oauth_response["refresh_token"] = snowflake_tokens["refresh_token"]
 
     return oauth_response
 
@@ -394,29 +428,22 @@ async def handle_refresh_token_grant_pydantic(
             },
         )
 
-    # Validate client credentials (only if not in Cursor compatibility mode)
-    if not settings.COMPATIBLE_WITH_CURSOR:
-        if token_request.client_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Client ID is required",
-                },
-            )
-        client = await oauth_service.validate_client(
-            token_request.client_id, token_request.client_secret
+    # SEP-2352: Verify the refresh token was issued by this AS
+    if refresh_data.get("issuer") and refresh_data["issuer"] != oauth_service.issuer:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_grant",
+                "error_description": "Refresh token was issued by a different authorization server",
+            },
         )
-        if not client:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client credentials",
-                },
-            )
 
-    # Use Snowflake refresh token if available
+    await _validate_client_credentials(token_request, oauth_service)
+
+    scope = token_request.scope or refresh_data.get("scope", "read")
+    expires_in = settings.ACCESS_TOKEN_EXPIRY
+
+    # Use upstream SSO refresh token if available
     snowflake_refresh_token = refresh_data.get("snowflake_refresh_token")
     if snowflake_refresh_token:
         try:
@@ -428,8 +455,8 @@ async def handle_refresh_token_grant_pydantic(
             oauth_response = {
                 "access_token": snowflake_token_response.get("access_token"),
                 "token_type": "Bearer",
-                "expires_in": snowflake_token_response.get("expires_in", 3600),
-                "scope": token_request.scope or refresh_data.get("scope", "read"),
+                "expires_in": snowflake_token_response.get("expires_in", expires_in),
+                "scope": scope,
             }
             if "refresh_token" in snowflake_token_response:
                 oauth_response["refresh_token"] = snowflake_token_response.get(
@@ -437,14 +464,24 @@ async def handle_refresh_token_grant_pydantic(
                 )
             return oauth_response
         except Exception as e:
-            logger.error(f"Failed to refresh Snowflake token: {e}")
+            logger.error(f"Failed to refresh upstream token: {e}")
 
-    # Fallback response
+    # Generate a local token when no upstream SSO is available
+    access_token = secrets.token_urlsafe(32)
+    await oauth_service.store_access_token(
+        access_token,
+        {
+            "client_id": refresh_data.get("client_id", ""),
+            "scope": scope,
+            "expires_at": time.time() + expires_in,
+        },
+    )
+
     return {
-        "access_token": "refreshed_access_token_placeholder",
+        "access_token": access_token,
         "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": token_request.scope or refresh_data.get("scope", "read"),
+        "expires_in": expires_in,
+        "scope": scope,
     }
 
 
@@ -452,34 +489,27 @@ async def handle_client_credentials_grant_pydantic(
     token_request: ClientCredentialsTokenRequest, oauth_service: OAuthService
 ) -> Dict[str, Any]:
     """Handle client credentials grant with Pydantic validation."""
-    # Validate client credentials (only if not in Cursor compatibility mode)
-    if not settings.COMPATIBLE_WITH_CURSOR:
-        if token_request.client_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Client ID is required",
-                },
-            )
-        client = await oauth_service.validate_client(
-            token_request.client_id, token_request.client_secret
-        )
-        if not client:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client credentials",
-                },
-            )
+    await _validate_client_credentials(token_request, oauth_service)
 
     # Generate access token for client credentials flow
+    scope = token_request.scope or "client"
+    expires_in = settings.ACCESS_TOKEN_EXPIRY
+    access_token = secrets.token_urlsafe(32)
+
+    await oauth_service.store_access_token(
+        access_token,
+        {
+            "client_id": token_request.client_id or "",
+            "scope": scope,
+            "expires_at": time.time() + expires_in,
+        },
+    )
+
     return {
-        "access_token": "client_credentials_access_token_placeholder",
+        "access_token": access_token,
         "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": token_request.scope or "client",
+        "expires_in": expires_in,
+        "scope": scope,
     }
 
 
@@ -499,6 +529,7 @@ async def handle_register(
             registration_request.grant_types,
             registration_request.response_types,
             registration_request.scope,
+            registration_request.application_type,
         )
 
         return ClientRegistrationResponse(**client_response)
@@ -520,6 +551,22 @@ async def handle_register(
                 "error_description": "Internal server error",
             },
         )
+
+
+async def handle_client_metadata(
+    client_id: str, oauth_service: OAuthService
+) -> ClientMetadataResponse:
+    """Handle CIMD (Client ID Metadata Document) endpoint per SEP-991."""
+    metadata = await oauth_service.get_client_metadata(client_id)
+    if not metadata:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "invalid_client",
+                "error_description": "Client not found",
+            },
+        )
+    return ClientMetadataResponse(**metadata)
 
 
 async def handle_introspect(

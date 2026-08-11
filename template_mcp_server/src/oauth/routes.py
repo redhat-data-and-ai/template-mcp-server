@@ -10,6 +10,7 @@ This module registers OAuth 2.0 endpoints with the FastAPI application including
 from typing import Any, Callable, Dict, Optional
 
 from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 
 from . import controller
 from .service import OAuthService
@@ -61,15 +62,28 @@ async def token_endpoint(request: Request) -> Dict[str, Any]:
 
 
 @oauth_router.post("/register")
-async def register_endpoint(request: Request) -> Dict[str, Any]:
+async def register_endpoint(request: Request):
     """Handle client registration endpoint requests.
 
-    Allows clients to register and obtain client credentials.
+    Deprecated per SEP-991: use the CIMD endpoint instead.
     """
     if get_oauth_service is None:
         raise RuntimeError("OAuth service not initialized")
     oauth_service = get_oauth_service()
     result = await controller.handle_register(request, oauth_service)
+    return JSONResponse(
+        content=result.model_dump(),
+        headers={"Deprecation": "true"},
+    )
+
+
+@oauth_router.get("/client-metadata/{client_id}")
+async def client_metadata_endpoint(request: Request, client_id: str) -> Dict[str, Any]:
+    """Serve Client ID Metadata Document (CIMD) per SEP-991."""
+    if get_oauth_service is None:
+        raise RuntimeError("OAuth service not initialized")
+    oauth_service = get_oauth_service()
+    result = await controller.handle_client_metadata(client_id, oauth_service)
     return result.model_dump()
 
 

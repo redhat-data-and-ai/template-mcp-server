@@ -10,6 +10,24 @@ from template_mcp_server.utils.pylogger import get_python_logger
 
 logger = get_python_logger()
 
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"type": "string", "enum": ["success", "error"]},
+        "operation": {"type": "string"},
+        "height_cm": {"type": "number"},
+        "weight_kg": {"type": "number"},
+        "bmi": {"type": "number"},
+        "category": {
+            "type": "string",
+            "enum": ["Underweight", "Normal weight", "Overweight", "Obese"],
+        },
+        "message": {"type": "string"},
+        "error": {"type": "string"},
+    },
+    "required": ["status", "message"],
+}
+
 
 def calculate_bmi(height: str, weight: str) -> Dict[str, Any]:
     """Calculate Body Mass Index (BMI) based on height and weight inputs.

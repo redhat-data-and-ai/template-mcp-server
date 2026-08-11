@@ -17,6 +17,31 @@ except ImportError:
 
 logger = get_python_logger()
 
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"type": "string", "enum": ["success", "error"]},
+        "queries": {"type": "array", "items": {"type": "string"}},
+        "total_results": {"type": "integer"},
+        "results": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "url": {"type": "string", "format": "uri"},
+                    "snippet": {"type": "string"},
+                    "score": {"type": ["number", "null"]},
+                    "query": {"type": "string"},
+                },
+            },
+        },
+        "message": {"type": "string"},
+        "error": {"type": "string"},
+    },
+    "required": ["status", "message"],
+}
+
 RETRY_DELAYS_SECONDS = (1, 2)
 _SEARCH_CONCURRENCY = 5
 

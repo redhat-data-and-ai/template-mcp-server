@@ -17,6 +17,14 @@ except ImportError:
 
 logger = get_python_logger()
 
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "result": {"type": "string"},
+    },
+    "required": ["result"],
+}
+
 RETRY_DELAYS_SECONDS = (1, 2)
 
 # Lock to prevent race conditions in multi-tenant setups when setting api_key
@@ -67,7 +75,14 @@ def invoke_email_agent(email_id: str, subject: str, body: str) -> str:
 
         # Get recipient email from settings or use provided email_id
         to_email = settings.RESEND_TO_EMAIL or email_id
-        from_email = settings.RESEND_FROM_EMAIL or "Acme <onboarding@resend.dev>"
+        from_email = settings.RESEND_FROM_EMAIL
+        if not from_email:
+            error_msg = "RESEND_FROM_EMAIL is not configured"
+            logger.error(
+                "From email validation failed",
+                extra={"error": error_msg},
+            )
+            return f"Error sending email: {error_msg}"
 
         # Prepare email parameters
         params = {

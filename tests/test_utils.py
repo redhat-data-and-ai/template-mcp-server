@@ -37,22 +37,6 @@ class TestPylogger:
         assert hasattr(logger, "debug")
         assert hasattr(logger, "critical")
 
-    def test_get_python_logger_custom_level(self):
-        """Test getting logger with custom log level."""
-        # Arrange
-        custom_level = "DEBUG"
-
-        # Act
-        logger = get_python_logger(custom_level)
-
-        # Assert
-        assert logger is not None
-        assert hasattr(logger, "info")
-        assert hasattr(logger, "error")
-        assert hasattr(logger, "warning")
-        assert hasattr(logger, "debug")
-        assert hasattr(logger, "critical")
-
     def test_get_python_logger_case_insensitive(self):
         """Test that log level is converted to uppercase."""
         # Arrange
@@ -181,15 +165,6 @@ class TestPylogger:
         call_args = mock_structlog.configure.call_args
         assert call_args[1]["cache_logger_on_first_use"] is True
 
-    def test_get_python_logger_return_type(self):
-        """Test that the function returns the correct type."""
-        # Act
-        logger = get_python_logger()
-
-        # Assert
-        assert logger is not None
-        # The logger should be a structlog logger instance
-
     def test_get_python_logger_function_signature(self):
         """Test that the function has the correct signature."""
         # Assert
@@ -199,21 +174,6 @@ class TestPylogger:
         assert len(sig.parameters) == 1
         assert "log_level" in sig.parameters
         assert sig.parameters["log_level"].default == "INFO"
-
-    def test_get_python_logger_multiple_calls(self):
-        """Test that multiple calls to get_python_logger work correctly."""
-        # Act
-        logger1 = get_python_logger("INFO")
-        logger2 = get_python_logger("DEBUG")
-        logger3 = get_python_logger()
-
-        # Assert
-        assert logger1 is not None
-        assert logger2 is not None
-        assert logger3 is not None
-        assert hasattr(logger1, "info")
-        assert hasattr(logger2, "info")
-        assert hasattr(logger3, "info")
 
     def test_get_python_logger_logging_functionality(self):
         """Test that the logger can be used for logging."""

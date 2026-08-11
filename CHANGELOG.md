@@ -12,7 +12,7 @@ This project uses [GitHub Releases](https://github.com/redhat-data-and-ai/templa
 - MCP server implementation with FastMCP and FastAPI.
 - Example tools: multiply numbers, code review prompt generator, Red Hat logo resource.
 - OAuth integration with PostgreSQL-backed token storage.
-- Multiple transport protocols: HTTP, SSE, streamable-HTTP.
+- Transport protocols: Streamable HTTP and stdio.
 - SSL/TLS support.
 - Structured JSON logging with structlog.
 - Pydantic-based configuration management.
