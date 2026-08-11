@@ -470,6 +470,16 @@ class Settings(BaseSettings):
         },
     )
 
+    # Multi Round-Trip Requests (SEP-2322)
+    MCP_MRTR_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_MRTR_ENABLED",
+            "description": "Enable multi round-trip request flow for tools that require user confirmation before executing (SEP-2322).",
+            "example": True,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.

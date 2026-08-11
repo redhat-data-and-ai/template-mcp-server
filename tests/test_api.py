@@ -1368,6 +1368,269 @@ class TestSEP2322MRTR:
         assert "tasks/list" in _REMOVED_METHODS
 
 
+class TestSEP2322MRTRFlow:
+    """SEP-2322: End-to-end MRTR flow — inputRequests and inputResponses."""
+
+    def test_mrtr_send_email_returns_input_required(self):
+        """First tools/call for send_email returns input_required with inputRequests."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hello",
+                        "body": "Test body",
+                    },
+                },
+            },
+        )
+        data = response.json()
+        result = data["result"]
+        assert result["resultType"] == "input_required"
+        assert len(result["inputRequests"]) == 1
+        req = result["inputRequests"][0]
+        assert req["requestId"] == "confirm-send"
+        assert req["title"] == "Confirm email send"
+        assert "test@example.com" in req["description"]
+        assert "Hello" in req["description"]
+        assert req["schema"]["type"] == "object"
+        assert "confirmed" in req["schema"]["properties"]
+
+    def test_mrtr_send_email_cancelled(self):
+        """Second call with confirmed=false returns cancelled."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hello",
+                        "body": "Test body",
+                    },
+                    "inputResponses": [
+                        {
+                            "requestId": "confirm-send",
+                            "value": {"confirmed": False},
+                        }
+                    ],
+                },
+            },
+        )
+        data = response.json()
+        result = data["result"]
+        assert result["resultType"] == "complete"
+        assert result["structuredContent"]["status"] == "cancelled"
+
+    @patch("template_mcp_server.src.tools.email_tool.send_email")
+    def test_mrtr_send_email_confirmed(self, mock_send):
+        """Second call with confirmed=true invokes the email tool."""
+        mock_send.return_value = "Email sent successfully to test@example.com"
+
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hello",
+                        "body": "Test body",
+                    },
+                    "inputResponses": [
+                        {
+                            "requestId": "confirm-send",
+                            "value": {"confirmed": True},
+                        }
+                    ],
+                },
+            },
+        )
+        data = response.json()
+        result = data["result"]
+        assert result["resultType"] == "complete"
+        assert result["structuredContent"]["status"] == "success"
+
+    @patch(
+        "template_mcp_server.src.tools.email_tool.send_email",
+        side_effect=Exception("SMTP error"),
+    )
+    def test_mrtr_send_email_error(self, mock_send):
+        """When email tool raises, MRTR returns error result."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hello",
+                        "body": "Test body",
+                    },
+                    "inputResponses": [
+                        {
+                            "requestId": "confirm-send",
+                            "value": {"confirmed": True},
+                        }
+                    ],
+                },
+            },
+        )
+        data = response.json()
+        result = data["result"]
+        assert result["resultType"] == "complete"
+        assert result["structuredContent"]["status"] == "error"
+        assert "SMTP error" in result["structuredContent"]["message"]
+
+    def test_mrtr_response_headers(self):
+        """MRTR responses include x-mcp-method and x-mcp-name headers."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hi",
+                        "body": "Body",
+                    },
+                },
+            },
+        )
+        assert response.headers.get("x-mcp-method") == "tools/call"
+        assert response.headers.get("x-mcp-name") == "send_email"
+
+    def test_mrtr_input_required_content_text(self):
+        """Input required result includes user-facing message in content."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "user@test.com",
+                        "subject": "Test",
+                        "body": "Body",
+                    },
+                },
+            },
+        )
+        data = response.json()
+        content = data["result"]["content"]
+        assert len(content) == 1
+        assert content[0]["type"] == "text"
+        assert "user@test.com" in content[0]["text"]
+
+    def test_mrtr_disabled_bypasses_confirmation(self):
+        """When MCP_MRTR_ENABLED=False, send_email is not intercepted by MRTR."""
+        from template_mcp_server.src.settings import settings
+
+        with patch.object(settings, "MCP_MRTR_ENABLED", False):
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 7,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "send_email",
+                        "arguments": {
+                            "email_id": "test@example.com",
+                            "subject": "Hi",
+                            "body": "Body",
+                        },
+                    },
+                },
+            )
+            if response.status_code == 200:
+                data = response.json()
+                result = data.get("result", {})
+                assert result.get("resultType") != "input_required"
+            else:
+                assert response.status_code == 500
+
+    def test_server_discover_advertises_mrtr(self):
+        """server/discover capabilities.tools includes multiRoundTrip."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 8, "method": "server/discover"},
+        )
+        data = response.json()
+        tools_cap = data["result"]["capabilities"]["tools"]
+        assert tools_cap["multiRoundTrip"] is True
+
+    def test_mrtr_tools_constant(self):
+        """_MRTR_TOOLS contains send_email."""
+        from template_mcp_server.src.api import _MRTR_TOOLS
+
+        assert "send_email" in _MRTR_TOOLS
+
+    def test_mrtr_with_trace_headers(self):
+        """MRTR responses include trace context headers when traceparent sent."""
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.post(
+            "/mcp",
+            headers={
+                "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": 9,
+                "method": "tools/call",
+                "params": {
+                    "name": "send_email",
+                    "arguments": {
+                        "email_id": "test@example.com",
+                        "subject": "Hi",
+                        "body": "Body",
+                    },
+                },
+            },
+        )
+        assert response.headers.get("traceparent") is not None
+        tp = response.headers["traceparent"]
+        assert tp.startswith("00-4bf92f3577b34da6a3ce929d0e0e4736-")
+
+    @pytest.mark.asyncio
+    async def test_mrtr_unknown_tool_returns_error(self):
+        """_handle_mrtr_tool_call returns error for unknown tool names."""
+        from template_mcp_server.src.api import McpProtocolMiddleware
+
+        middleware = McpProtocolMiddleware(app)
+        resp = await middleware._handle_mrtr_tool_call("nonexistent_tool", 99, {}, [])
+        data = json.loads(resp.body)
+        assert data["error"]["code"] == -32602
+        assert "Unknown MRTR tool" in data["error"]["message"]
+
+
 class TestSEP2133Extensions:
     """SEP-2133: Extensions framework — extensions in server/discover."""
 

@@ -29,6 +29,12 @@ from template_mcp_server.src.extensions import (
     extension_registry,
 )
 from template_mcp_server.src.mcp import TemplateMCPServer
+from template_mcp_server.src.mrtr import (
+    complete_result,
+    get_response_value,
+    input_required_result,
+    make_input_request,
+)
 from template_mcp_server.src.oauth.handler import OAuth2Handler
 from template_mcp_server.src.oauth.routes import register_oauth_routes
 from template_mcp_server.src.oauth.service import OAuthService, get_current_issuer
@@ -128,6 +134,12 @@ _TASK_METHODS = frozenset({"tasks/get", "tasks/update", "tasks/cancel"})
 # SEP-1865: Apps RPCs handled by the middleware.
 _APPS_METHODS = frozenset({"apps/list", "apps/get"})
 
+# SEP-2322: MRTR-enabled tool names (require user confirmation before executing).
+_MRTR_TOOLS = frozenset({"send_email"})
+
+# SEP-2322: MRTR confirmation request ID for email tool.
+_MRTR_CONFIRM_SEND_ID = "confirm-send"
+
 # SEP-1865: Register default MCP Apps.
 app_registry.register(
     AppEntry(
@@ -164,7 +176,9 @@ def _jsonrpc_error(request_id, code: int, message: str) -> JSONResponse:
 
 def get_server_discover_result() -> dict:
     """SEP-2575(a): Build the server/discover response payload."""
-    capabilities: dict = {"tools": {}}
+    capabilities: dict = {
+        "tools": {"multiRoundTrip": settings.MCP_MRTR_ENABLED},
+    }
 
     # SEP-2133: Include registered extensions in capabilities.
     if settings.MCP_EXTENSIONS_ENABLED:
@@ -276,6 +290,28 @@ class McpProtocolMiddleware(BaseHTTPMiddleware):
         # SEP-1865: Handle apps RPCs.
         if rpc_method in _APPS_METHODS:
             return self._handle_apps_rpc(rpc_method, request_id, body)
+
+        # SEP-2322: Handle MRTR-enabled tool calls.
+        if (
+            settings.MCP_MRTR_ENABLED
+            and rpc_method == "tools/call"
+            and tool_name in _MRTR_TOOLS
+        ):
+            arguments = params.get("arguments", {}) if isinstance(params, dict) else {}
+            input_responses = (
+                params.get("inputResponses", []) if isinstance(params, dict) else []
+            )
+            self._bind_trace_context(request, body)
+            resp = await self._handle_mrtr_tool_call(
+                tool_name, request_id, arguments, input_responses
+            )
+            resp.headers["x-mcp-method"] = rpc_method
+            if tool_name:
+                resp.headers["x-mcp-name"] = tool_name
+            trace_headers = self._trace_response_headers(request, body)
+            for k, v in trace_headers.items():
+                resp.headers[k] = v
+            return resp
 
         # SEP-2575(d): Extract per-request logLevel from _meta.
         params = body.get("params", {})
@@ -406,6 +442,85 @@ class McpProtocolMiddleware(BaseHTTPMiddleware):
                     "result": entry.to_dict(),
                 }
             )
+
+    async def _handle_mrtr_tool_call(
+        self,
+        tool_name: str,
+        request_id: object,
+        arguments: dict,
+        input_responses: list,
+    ) -> JSONResponse:
+        """SEP-2322: Dispatch an MRTR-enabled tool call."""
+        if tool_name == "send_email":
+            return await self._mrtr_send_email(request_id, arguments, input_responses)
+
+        return _jsonrpc_error(
+            request_id, RESOURCE_NOT_FOUND, f"Unknown MRTR tool: {tool_name}"
+        )
+
+    async def _mrtr_send_email(
+        self,
+        request_id: object,
+        arguments: dict,
+        input_responses: list,
+    ) -> JSONResponse:
+        """SEP-2322: MRTR handler for send_email — confirm before sending."""
+        confirmation = get_response_value(input_responses, _MRTR_CONFIRM_SEND_ID)
+
+        if confirmation is None:
+            email_id = arguments.get("email_id", "unknown")
+            subject = arguments.get("subject", "unknown")
+            result = input_required_result(
+                [
+                    make_input_request(
+                        title="Confirm email send",
+                        description=(
+                            f"Send email to '{email_id}' with subject '{subject}'?"
+                        ),
+                        schema={
+                            "type": "object",
+                            "properties": {
+                                "confirmed": {
+                                    "type": "boolean",
+                                    "description": "Set to true to confirm sending",
+                                }
+                            },
+                            "required": ["confirmed"],
+                        },
+                        request_id=_MRTR_CONFIRM_SEND_ID,
+                    )
+                ],
+                message=f"Please confirm sending email to '{email_id}'.",
+            )
+            return JSONResponse(
+                content={"jsonrpc": "2.0", "id": request_id, "result": result}
+            )
+
+        if not confirmation.get("confirmed", False):
+            result = complete_result(
+                {"status": "cancelled", "message": "Email send cancelled by user."},
+                message="Email send cancelled by user.",
+            )
+            return JSONResponse(
+                content={"jsonrpc": "2.0", "id": request_id, "result": result}
+            )
+
+        from template_mcp_server.src.tools.email_tool import send_email
+
+        try:
+            tool_output = await send_email(**arguments)
+            result = complete_result(
+                {"status": "success", "message": tool_output},
+                message=tool_output,
+            )
+        except Exception as e:
+            result = complete_result(
+                {"status": "error", "message": str(e)},
+                message=f"Email send failed: {e}",
+            )
+        return JSONResponse(
+            content={"jsonrpc": "2.0", "id": request_id, "result": result}
+        )
 
     @staticmethod
     def _extract_trace_context(request: Request, body: dict) -> dict:
