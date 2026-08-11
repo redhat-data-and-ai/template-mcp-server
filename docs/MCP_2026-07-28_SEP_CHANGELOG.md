@@ -21,7 +21,7 @@ All 19 SEPs from the 2026-07-28 sprint roadmap are **fully implemented**.
 | 6 | SEP-2207 | OIDC `offline_access` exclusion — not in `scopes_supported`, refresh tokens via `grant_types_supported` | **Done** |
 | 7 | SEP-2243 | `Mcp-Method` / `Mcp-Name` header validation — rejects mismatches with `-32020 HEADER_MISMATCH` | **Done** |
 | 8 | SEP-2260 | Server request association — no standalone pushes; verified structurally (tools-only architecture) | **Done** |
-| 9 | SEP-2322 | Multi Round-Trip Requests — `resultType: "complete"` injected into every `tools/call` response | **Done** |
+| 9 | SEP-2322 | Multi Round-Trip Requests — full MRTR flow with `mrtr.py` module (`InputRequest`, `make_input_request`, `get_response_value`, `input_required_result`, `complete_result`), middleware dispatch (`_handle_mrtr_tool_call`, `_mrtr_send_email`), `inputRequests`/`inputResponses` for send_email confirmation, `resultType` injection, `multiRoundTrip` capability in `server/discover` | **Done** |
 | 10 | SEP-2352 | Client Credential Binding — tokens tagged with issuer, grants verify issuer match | **Done** |
 | 11 | SEP-2468 | `iss` in Authorization Responses — RFC 9207 `iss` parameter in redirect, `authorization_response_iss_parameter_supported: true` | **Done** |
 | 12 | SEP-2549 | Deterministic `tools/list` ordering + TTL/Cache Scope metadata on each tool | **Done** |
