@@ -7,6 +7,7 @@ tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 from typing import Any, Dict
 
 from fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from template_mcp_server.src.schema import validate_input_schema, validate_output_schema
 from template_mcp_server.src.settings import settings
@@ -79,18 +80,55 @@ class TemplateMCPServer:
         """Register MCP tools for template operations (tools-first architecture).
 
         Registers all available tools with the FastMCP server instance.
-        Each tool includes an outputSchema (SEP-2106) and cache metadata (SEP-2549).
+        Each tool includes an outputSchema (SEP-2106), cache metadata (SEP-2549),
+        and ToolAnnotations with behavioral hints for clients.
         """
         cache_meta = self._get_cache_meta()
 
-        self.mcp.tool(output_schema=BMI_OUTPUT_SCHEMA, meta=cache_meta)(calculate_bmi)
-        self.mcp.tool(output_schema=WEB_SEARCH_OUTPUT_SCHEMA, meta=cache_meta)(
-            search_web
-        )
-        self.mcp.tool(output_schema=EMAIL_OUTPUT_SCHEMA, meta=cache_meta)(send_email)
-        self.mcp.tool(output_schema=VALIDATE_EMAIL_OUTPUT_SCHEMA, meta=cache_meta)(
-            validate_email
-        )
+        self.mcp.tool(
+            output_schema=BMI_OUTPUT_SCHEMA,
+            meta=cache_meta,
+            annotations=ToolAnnotations(
+                title="BMI Calculator",
+                readOnlyHint=True,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=False,
+            ),
+        )(calculate_bmi)
+        self.mcp.tool(
+            output_schema=WEB_SEARCH_OUTPUT_SCHEMA,
+            meta=cache_meta,
+            annotations=ToolAnnotations(
+                title="Web Search",
+                readOnlyHint=True,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=True,
+            ),
+        )(search_web)
+        self.mcp.tool(
+            output_schema=EMAIL_OUTPUT_SCHEMA,
+            meta=cache_meta,
+            annotations=ToolAnnotations(
+                title="Send Email",
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )(send_email)
+        self.mcp.tool(
+            output_schema=VALIDATE_EMAIL_OUTPUT_SCHEMA,
+            meta=cache_meta,
+            annotations=ToolAnnotations(
+                title="Validate Email",
+                readOnlyHint=True,
+                destructiveHint=False,
+                idempotentHint=True,
+                openWorldHint=False,
+            ),
+        )(validate_email)
 
     def _validate_tool_schemas(self) -> None:
         """SEP-2106: Validate all registered tool schemas against JSON Schema 2020-12.

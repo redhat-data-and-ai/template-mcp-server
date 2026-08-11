@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from mcp.types import ToolAnnotations
 
 from template_mcp_server.src.mcp import TemplateMCPServer
 
@@ -483,3 +484,117 @@ class TestSEP2549CacheMetadata:
 
         meta = server._get_cache_meta()
         assert meta == {"ttlMs": 120000, "cacheScope": "private"}
+
+
+class TestToolAnnotations:
+    """Test that all tools are registered with correct ToolAnnotations."""
+
+    @patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers")
+    @patch("template_mcp_server.src.mcp.settings")
+    @patch("template_mcp_server.src.mcp.FastMCP")
+    def test_all_tools_have_annotations(
+        self, mock_fastmcp, mock_settings, mock_force_reconfigure
+    ):
+        """Test that every tool registration includes annotations."""
+        mock_mcp = _make_mock_mcp()
+        mock_fastmcp.return_value = mock_mcp
+        mock_settings.PYTHON_LOG_LEVEL = "INFO"
+        mock_settings.TOOL_CACHE_TTL_MS = 300000
+        mock_settings.TOOL_CACHE_SCOPE = "public"
+
+        TemplateMCPServer()
+
+        calls = mock_mcp.tool.call_args_list
+        assert len(calls) == 4
+        for call in calls:
+            assert "annotations" in call.kwargs
+            ann = call.kwargs["annotations"]
+            assert isinstance(ann, ToolAnnotations)
+
+    @patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers")
+    @patch("template_mcp_server.src.mcp.settings")
+    @patch("template_mcp_server.src.mcp.FastMCP")
+    def test_bmi_tool_annotations(
+        self, mock_fastmcp, mock_settings, mock_force_reconfigure
+    ):
+        """BMI calculator: read-only, not destructive, idempotent, closed-world."""
+        mock_mcp = _make_mock_mcp()
+        mock_fastmcp.return_value = mock_mcp
+        mock_settings.PYTHON_LOG_LEVEL = "INFO"
+        mock_settings.TOOL_CACHE_TTL_MS = 300000
+        mock_settings.TOOL_CACHE_SCOPE = "public"
+
+        TemplateMCPServer()
+
+        ann = mock_mcp.tool.call_args_list[0].kwargs["annotations"]
+        assert ann.title == "BMI Calculator"
+        assert ann.readOnlyHint is True
+        assert ann.destructiveHint is False
+        assert ann.idempotentHint is True
+        assert ann.openWorldHint is False
+
+    @patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers")
+    @patch("template_mcp_server.src.mcp.settings")
+    @patch("template_mcp_server.src.mcp.FastMCP")
+    def test_web_search_tool_annotations(
+        self, mock_fastmcp, mock_settings, mock_force_reconfigure
+    ):
+        """Web search: read-only, not destructive, idempotent, open-world."""
+        mock_mcp = _make_mock_mcp()
+        mock_fastmcp.return_value = mock_mcp
+        mock_settings.PYTHON_LOG_LEVEL = "INFO"
+        mock_settings.TOOL_CACHE_TTL_MS = 300000
+        mock_settings.TOOL_CACHE_SCOPE = "public"
+
+        TemplateMCPServer()
+
+        ann = mock_mcp.tool.call_args_list[1].kwargs["annotations"]
+        assert ann.title == "Web Search"
+        assert ann.readOnlyHint is True
+        assert ann.destructiveHint is False
+        assert ann.idempotentHint is True
+        assert ann.openWorldHint is True
+
+    @patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers")
+    @patch("template_mcp_server.src.mcp.settings")
+    @patch("template_mcp_server.src.mcp.FastMCP")
+    def test_send_email_tool_annotations(
+        self, mock_fastmcp, mock_settings, mock_force_reconfigure
+    ):
+        """Send email: not read-only, destructive, not idempotent, open-world."""
+        mock_mcp = _make_mock_mcp()
+        mock_fastmcp.return_value = mock_mcp
+        mock_settings.PYTHON_LOG_LEVEL = "INFO"
+        mock_settings.TOOL_CACHE_TTL_MS = 300000
+        mock_settings.TOOL_CACHE_SCOPE = "public"
+
+        TemplateMCPServer()
+
+        ann = mock_mcp.tool.call_args_list[2].kwargs["annotations"]
+        assert ann.title == "Send Email"
+        assert ann.readOnlyHint is False
+        assert ann.destructiveHint is True
+        assert ann.idempotentHint is False
+        assert ann.openWorldHint is True
+
+    @patch("template_mcp_server.src.mcp.force_reconfigure_all_loggers")
+    @patch("template_mcp_server.src.mcp.settings")
+    @patch("template_mcp_server.src.mcp.FastMCP")
+    def test_validate_email_tool_annotations(
+        self, mock_fastmcp, mock_settings, mock_force_reconfigure
+    ):
+        """Validate email: read-only, not destructive, idempotent, closed-world."""
+        mock_mcp = _make_mock_mcp()
+        mock_fastmcp.return_value = mock_mcp
+        mock_settings.PYTHON_LOG_LEVEL = "INFO"
+        mock_settings.TOOL_CACHE_TTL_MS = 300000
+        mock_settings.TOOL_CACHE_SCOPE = "public"
+
+        TemplateMCPServer()
+
+        ann = mock_mcp.tool.call_args_list[3].kwargs["annotations"]
+        assert ann.title == "Validate Email"
+        assert ann.readOnlyHint is True
+        assert ann.destructiveHint is False
+        assert ann.idempotentHint is True
+        assert ann.openWorldHint is False
