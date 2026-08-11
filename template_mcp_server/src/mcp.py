@@ -4,15 +4,36 @@ This module contains the main Template MCP Server class that provides
 tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 """
 
+from typing import Any, Dict
+
 from fastmcp import FastMCP
 
+from template_mcp_server.src.schema import validate_input_schema, validate_output_schema
 from template_mcp_server.src.settings import settings
-from template_mcp_server.src.tools.bmi_tool import calculate_bmi
+from template_mcp_server.src.tools.bmi_tool import (
+    OUTPUT_SCHEMA as BMI_OUTPUT_SCHEMA,
+)
+from template_mcp_server.src.tools.bmi_tool import (
+    calculate_bmi,
+)
+from template_mcp_server.src.tools.email_tool import (
+    OUTPUT_SCHEMA as EMAIL_OUTPUT_SCHEMA,
+)
 from template_mcp_server.src.tools.email_tool import (
     send_email,
 )
-from template_mcp_server.src.tools.validate_email_tool import validate_email
-from template_mcp_server.src.tools.web_search_tool import search_web
+from template_mcp_server.src.tools.validate_email_tool import (
+    OUTPUT_SCHEMA as VALIDATE_EMAIL_OUTPUT_SCHEMA,
+)
+from template_mcp_server.src.tools.validate_email_tool import (
+    validate_email,
+)
+from template_mcp_server.src.tools.web_search_tool import (
+    OUTPUT_SCHEMA as WEB_SEARCH_OUTPUT_SCHEMA,
+)
+from template_mcp_server.src.tools.web_search_tool import (
+    search_web,
+)
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -38,6 +59,7 @@ class TemplateMCPServer:
             force_reconfigure_all_loggers(settings.PYTHON_LOG_LEVEL)
 
             self._register_mcp_tools()
+            self._validate_tool_schemas()
             self._ensure_deterministic_tool_order()
 
             logger.info("Template MCP Server initialized successfully")
@@ -46,22 +68,54 @@ class TemplateMCPServer:
             logger.error(f"Failed to initialize Template MCP Server: {e}")
             raise
 
+    def _get_cache_meta(self) -> Dict[str, Any]:
+        """Build tool-level cache metadata from settings (SEP-2549)."""
+        return {
+            "ttlMs": settings.TOOL_CACHE_TTL_MS,
+            "cacheScope": settings.TOOL_CACHE_SCOPE,
+        }
+
     def _register_mcp_tools(self) -> None:
         """Register MCP tools for template operations (tools-first architecture).
 
         Registers all available tools with the FastMCP server instance.
-        In tools-first architecture, the server only provides tools.
-        Currently includes:
-        - calculate_bmi: BMI calculator
-        - search_web: Web search using Tavily API for current information
-        - send_email: Email operations
-        - validate_email: Email format validation
+        Each tool includes an outputSchema (SEP-2106) and cache metadata (SEP-2549).
         """
-        # Register all the imported tools
-        self.mcp.tool()(calculate_bmi)
-        self.mcp.tool()(search_web)
-        self.mcp.tool()(send_email)
-        self.mcp.tool()(validate_email)
+        cache_meta = self._get_cache_meta()
+
+        self.mcp.tool(output_schema=BMI_OUTPUT_SCHEMA, meta=cache_meta)(calculate_bmi)
+        self.mcp.tool(output_schema=WEB_SEARCH_OUTPUT_SCHEMA, meta=cache_meta)(
+            search_web
+        )
+        self.mcp.tool(output_schema=EMAIL_OUTPUT_SCHEMA, meta=cache_meta)(send_email)
+        self.mcp.tool(output_schema=VALIDATE_EMAIL_OUTPUT_SCHEMA, meta=cache_meta)(
+            validate_email
+        )
+
+    def _validate_tool_schemas(self) -> None:
+        """SEP-2106: Validate all registered tool schemas against JSON Schema 2020-12.
+
+        Checks that every tool's inputSchema has type: "object" at root
+        and that outputSchemas (if present) are well-formed.
+        """
+        components = self.mcp.local_provider._components
+        for key, tool in components.items():
+            if not key.startswith("tool:"):
+                continue
+
+            input_errors = validate_input_schema(tool.parameters)
+            if input_errors:
+                raise ValueError(
+                    f"Tool {tool.name!r} inputSchema validation failed: "
+                    + "; ".join(input_errors)
+                )
+
+            output_errors = validate_output_schema(tool.output_schema)
+            if output_errors:
+                raise ValueError(
+                    f"Tool {tool.name!r} outputSchema validation failed: "
+                    + "; ".join(output_errors)
+                )
 
     def _ensure_deterministic_tool_order(self) -> None:
         """SEP-2549: Wrap list_tools to return tools sorted by name.

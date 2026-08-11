@@ -17,6 +17,14 @@ except ImportError:
 
 logger = get_python_logger()
 
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "result": {"type": "string"},
+    },
+    "required": ["result"],
+}
+
 RETRY_DELAYS_SECONDS = (1, 2)
 
 # Lock to prevent race conditions in multi-tenant setups when setting api_key

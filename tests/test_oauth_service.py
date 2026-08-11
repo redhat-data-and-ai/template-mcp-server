@@ -989,3 +989,71 @@ class TestIssuerBinding:
         mock_storage.store_authorization_code.assert_called_once()
         stored_data = mock_storage.store_authorization_code.call_args[0][1]
         assert stored_data["issuer"] == "http://issuer-a.com"
+
+
+class TestGetClientMetadata:
+    """Test OAuthService.get_client_metadata (SEP-991 CIMD)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_metadata_without_secret(self):
+        """Test that get_client_metadata returns public metadata without secret."""
+        from template_mcp_server.src.storage.storage_service import StorageService
+
+        mock_storage = AsyncMock(spec=StorageService)
+        mock_storage.get_client.return_value = {
+            "id": "client123",
+            "secret": "should_not_appear",
+            "name": "Test Client",
+            "redirect_uris": ["http://localhost:3000/callback"],
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+            "scope": "read write",
+            "issuer": "http://localhost:5001",
+            "application_type": "native",
+            "created_at": 1234567890.0,
+        }
+
+        oauth_service = OAuthService(mock_storage, "http://localhost:5001")
+        result = await oauth_service.get_client_metadata("client123")
+
+        assert result is not None
+        assert result["client_id"] == "client123"
+        assert result["client_name"] == "Test Client"
+        assert result["application_type"] == "native"
+        assert "secret" not in result
+        assert "client_secret" not in result
+        assert "created_at" not in result
+        mock_storage.get_client.assert_called_once_with(
+            "client123", "http://localhost:5001"
+        )
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_unknown_client(self):
+        """Test that get_client_metadata returns None for unknown client."""
+        from template_mcp_server.src.storage.storage_service import StorageService
+
+        mock_storage = AsyncMock(spec=StorageService)
+        mock_storage.get_client.return_value = None
+
+        oauth_service = OAuthService(mock_storage, "http://localhost:5001")
+        result = await oauth_service.get_client_metadata("unknown")
+
+        assert result is None
+        mock_storage.get_client.assert_called_once_with(
+            "unknown", "http://localhost:5001"
+        )
+
+    @pytest.mark.asyncio
+    async def test_uses_service_issuer_for_lookup(self):
+        """Test that get_client_metadata uses the service's issuer, not the client's."""
+        from template_mcp_server.src.storage.storage_service import StorageService
+
+        mock_storage = AsyncMock(spec=StorageService)
+        mock_storage.get_client.return_value = None
+
+        oauth_service = OAuthService(mock_storage, "http://issuer-a.com")
+        await oauth_service.get_client_metadata("client123")
+
+        mock_storage.get_client.assert_called_once_with(
+            "client123", "http://issuer-a.com"
+        )

@@ -26,6 +26,7 @@ MCP_RESERVED_RANGE_MAX = -32020
 HEADER_MISMATCH = -32020
 MISSING_REQUIRED_CLIENT_CAPABILITY = -32021
 UNSUPPORTED_PROTOCOL_VERSION = -32022
+METHOD_NOT_SUPPORTED = -32023
 
 
 # ── Renumbered Error Codes ────────────────────────────────────────────
@@ -76,6 +77,20 @@ class UnsupportedProtocolVersionError(McpError):
         """Initialize with optional message and data."""
         super().__init__(
             ErrorData(code=UNSUPPORTED_PROTOCOL_VERSION, message=message, data=data)
+        )
+
+
+class MethodNotSupportedError(McpError):
+    """Raised when the client calls a method removed in stateless mode (SEP-2575)."""
+
+    def __init__(
+        self,
+        message: str = "Method not supported in stateless mode",
+        data: Optional[Any] = None,
+    ):
+        """Initialize with optional message and data."""
+        super().__init__(
+            ErrorData(code=METHOD_NOT_SUPPORTED, message=message, data=data)
         )
 
 

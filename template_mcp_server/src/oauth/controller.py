@@ -24,6 +24,7 @@ from .handler import OAuth2Handler
 from .models import (
     AuthorizationCodeTokenRequest,
     ClientCredentialsTokenRequest,
+    ClientMetadataResponse,
     ClientRegistrationRequest,
     ClientRegistrationResponse,
     RefreshTokenRequest,
@@ -550,6 +551,22 @@ async def handle_register(
                 "error_description": "Internal server error",
             },
         )
+
+
+async def handle_client_metadata(
+    client_id: str, oauth_service: OAuthService
+) -> ClientMetadataResponse:
+    """Handle CIMD (Client ID Metadata Document) endpoint per SEP-991."""
+    metadata = await oauth_service.get_client_metadata(client_id)
+    if not metadata:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "invalid_client",
+                "error_description": "Client not found",
+            },
+        )
+    return ClientMetadataResponse(**metadata)
 
 
 async def handle_introspect(

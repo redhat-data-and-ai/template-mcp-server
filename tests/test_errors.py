@@ -10,10 +10,12 @@ from template_mcp_server.src.errors import (
     IMPL_DEFINED_RANGE_MIN,
     MCP_RESERVED_RANGE_MAX,
     MCP_RESERVED_RANGE_MIN,
+    METHOD_NOT_SUPPORTED,
     MISSING_REQUIRED_CLIENT_CAPABILITY,
     RESOURCE_NOT_FOUND,
     UNSUPPORTED_PROTOCOL_VERSION,
     HeaderMismatchError,
+    MethodNotSupportedError,
     MissingRequiredClientCapabilityError,
     ResourceNotFoundError,
     UnsupportedProtocolVersionError,
@@ -56,6 +58,9 @@ class TestErrorCodeValues:
     def test_unsupported_protocol_version_value(self):
         assert UNSUPPORTED_PROTOCOL_VERSION == -32022
 
+    def test_method_not_supported_value(self):
+        assert METHOD_NOT_SUPPORTED == -32023
+
     def test_resource_not_found_value(self):
         assert RESOURCE_NOT_FOUND == -32602
 
@@ -64,6 +69,7 @@ class TestErrorCodeValues:
             HEADER_MISMATCH,
             MISSING_REQUIRED_CLIENT_CAPABILITY,
             UNSUPPORTED_PROTOCOL_VERSION,
+            METHOD_NOT_SUPPORTED,
         ):
             assert MCP_RESERVED_RANGE_MIN <= code <= MCP_RESERVED_RANGE_MAX
 
@@ -72,6 +78,7 @@ class TestErrorCodeValues:
             HEADER_MISMATCH,
             MISSING_REQUIRED_CLIENT_CAPABILITY,
             UNSUPPORTED_PROTOCOL_VERSION,
+            METHOD_NOT_SUPPORTED,
         ]
         assert len(codes) == len(set(codes))
 
@@ -160,6 +167,29 @@ class TestUnsupportedProtocolVersionError:
         assert str(err) == "custom"
 
 
+class TestMethodNotSupportedError:
+    """Test MethodNotSupportedError exception class (SEP-2575)."""
+
+    def test_default_message(self):
+        err = MethodNotSupportedError()
+        assert err.error.code == METHOD_NOT_SUPPORTED
+        assert err.error.message == "Method not supported in stateless mode"
+        assert err.error.data is None
+
+    def test_custom_message(self):
+        msg = "ping is not supported"
+        err = MethodNotSupportedError(message=msg)
+        assert err.error.message == msg
+        assert err.error.code == METHOD_NOT_SUPPORTED
+
+    def test_extends_mcp_error(self):
+        assert isinstance(MethodNotSupportedError(), McpError)
+
+    def test_str_matches_message(self):
+        err = MethodNotSupportedError(message="custom")
+        assert str(err) == "custom"
+
+
 class TestResourceNotFoundError:
     """Test ResourceNotFoundError exception class."""
 
@@ -206,6 +236,7 @@ class TestErrorDataIntegration:
             HeaderMismatchError(),
             MissingRequiredClientCapabilityError(),
             UnsupportedProtocolVersionError(),
+            MethodNotSupportedError(),
             ResourceNotFoundError(),
         ]
         codes = [e.error.code for e in errors]
@@ -221,6 +252,7 @@ class TestErrorDataIntegration:
             (HeaderMismatchError, HEADER_MISMATCH),
             (MissingRequiredClientCapabilityError, MISSING_REQUIRED_CLIENT_CAPABILITY),
             (UnsupportedProtocolVersionError, UNSUPPORTED_PROTOCOL_VERSION),
+            (MethodNotSupportedError, METHOD_NOT_SUPPORTED),
             (ResourceNotFoundError, RESOURCE_NOT_FOUND),
         ]
         for cls, expected_code in pairs:

@@ -411,6 +411,65 @@ class Settings(BaseSettings):
         },
     )
 
+    # Tool Cache Configuration (SEP-2549)
+    TOOL_CACHE_TTL_MS: int = Field(
+        default=300000,
+        ge=0,
+        le=86400000,
+        json_schema_extra={
+            "env": "TOOL_CACHE_TTL_MS",
+            "description": "TTL in milliseconds for tools/list cache (default 300000 = 5 minutes). Set to 0 to disable caching.",
+            "example": 300000,
+        },
+    )
+    TOOL_CACHE_SCOPE: str = Field(
+        default="public",
+        json_schema_extra={
+            "env": "TOOL_CACHE_SCOPE",
+            "description": "Cache scope for tools/list responses",
+            "example": "public",
+            "enum": ["public", "private"],
+        },
+    )
+
+    # Stateless MCP Configuration (SEP-2567, SEP-2575)
+    MCP_STATELESS_HTTP: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_STATELESS_HTTP",
+            "description": "Enable stateless HTTP mode (no Mcp-Session-Id tracking). Per SEP-2567.",
+            "example": True,
+        },
+    )
+    MCP_PROTOCOL_VERSION: str = Field(
+        default="2026-07-28",
+        json_schema_extra={
+            "env": "MCP_PROTOCOL_VERSION",
+            "description": "MCP protocol version advertised in server/discover responses",
+            "example": "2026-07-28",
+        },
+    )
+
+    # W3C Trace Context (SEP-414)
+    MCP_TRACE_CONTEXT_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_TRACE_CONTEXT_ENABLED",
+            "description": "Enable W3C Trace Context propagation (traceparent, tracestate, baggage) in MCP requests",
+            "example": True,
+        },
+    )
+
+    # Extensions Framework (SEP-2133)
+    MCP_EXTENSIONS_ENABLED: bool = Field(
+        default=True,
+        json_schema_extra={
+            "env": "MCP_EXTENSIONS_ENABLED",
+            "description": "Enable MCP extensions framework (SEP-2133). Advertises registered extensions in server/discover.",
+            "example": True,
+        },
+    )
+
 
 def validate_config(settings: Settings) -> None:
     """Validate configuration settings.

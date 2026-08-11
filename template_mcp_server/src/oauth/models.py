@@ -96,3 +96,19 @@ class ClientRegistrationResponse(BaseModel):
         ..., description="Client application type (web or native)"
     )
     client_id_issued_at: int = Field(..., description="Time when client ID was issued")
+
+
+class ClientMetadataResponse(BaseModel):
+    """Response model for CIMD (Client ID Metadata Document) per SEP-991."""
+
+    client_id: str = Field(..., description="The client identifier")
+    client_name: str = Field(..., description="Human-readable name of the client")
+    redirect_uris: list[str] = Field(..., description="Array of redirect URIs")
+    grant_types: list[str] = Field(..., description="Array of OAuth 2.0 grant types")
+    response_types: list[str] = Field(
+        ..., description="Array of OAuth 2.0 response types"
+    )
+    scope: str = Field(..., description="Space-separated list of scope values")
+    application_type: str = Field(
+        ..., description="Client application type (web or native)"
+    )

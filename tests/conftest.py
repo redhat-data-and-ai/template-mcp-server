@@ -13,9 +13,6 @@ def mock_imports():
         {
             "fastmcp": Mock(),
             "structlog": Mock(),
-            "pydantic": Mock(),
-            "pydantic_settings": Mock(),
-            "fastapi": Mock(),
             "uvicorn": Mock(),
             "httpx": Mock(),
             "requests": Mock(),

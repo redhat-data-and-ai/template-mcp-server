@@ -1916,6 +1916,75 @@ class TestHandleIntrospectFullCoverage:
             assert exc_info.value.detail["error"] == "server_error"
 
 
+class TestHandleClientMetadata:
+    """Test handle_client_metadata function (SEP-991 CIMD endpoint)."""
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_found(self):
+        """Test CIMD returns metadata for a known client."""
+        from template_mcp_server.src.oauth.models import ClientMetadataResponse
+
+        oauth_service = AsyncMock(spec=OAuthService)
+        oauth_service.get_client_metadata = AsyncMock(
+            return_value={
+                "client_id": "client123",
+                "client_name": "Test Client",
+                "redirect_uris": ["http://localhost:3000/callback"],
+                "grant_types": ["authorization_code", "refresh_token"],
+                "response_types": ["code"],
+                "scope": "read write",
+                "application_type": "native",
+            }
+        )
+
+        result = await controller.handle_client_metadata("client123", oauth_service)
+
+        assert isinstance(result, ClientMetadataResponse)
+        result_dict = result.model_dump()
+        assert result_dict["client_id"] == "client123"
+        assert result_dict["client_name"] == "Test Client"
+        assert result_dict["redirect_uris"] == ["http://localhost:3000/callback"]
+        assert result_dict["application_type"] == "native"
+        oauth_service.get_client_metadata.assert_called_once_with("client123")
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_not_found(self):
+        """Test CIMD returns 404 for unknown client."""
+        oauth_service = AsyncMock(spec=OAuthService)
+        oauth_service.get_client_metadata = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await controller.handle_client_metadata("unknown_client", oauth_service)
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["error"] == "invalid_client"
+        assert "Client not found" in exc_info.value.detail["error_description"]
+
+    @pytest.mark.asyncio
+    async def test_client_metadata_does_not_expose_secret(self):
+        """Test that CIMD response does not include client_secret."""
+        from template_mcp_server.src.oauth.models import ClientMetadataResponse
+
+        oauth_service = AsyncMock(spec=OAuthService)
+        oauth_service.get_client_metadata = AsyncMock(
+            return_value={
+                "client_id": "client123",
+                "client_name": "Test Client",
+                "redirect_uris": ["http://localhost:3000/callback"],
+                "grant_types": ["authorization_code"],
+                "response_types": ["code"],
+                "scope": "read write",
+                "application_type": "web",
+            }
+        )
+
+        result = await controller.handle_client_metadata("client123", oauth_service)
+
+        result_dict = result.model_dump()
+        assert "client_secret" not in result_dict
+        assert "client_id_issued_at" not in result_dict
+
+
 class TestExternalBrowserAuthImport:
     """Cover the conditional import on line 36."""
 

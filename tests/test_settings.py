@@ -168,6 +168,34 @@ class TestClusterReadySettings:
             settings = Settings()
             assert settings.OAUTH_ISSUER == "https://auth.example.com"
 
+    def test_tool_cache_ttl_ms_default(self):
+        """Test TOOL_CACHE_TTL_MS defaults to 300000 (5 minutes)."""
+        settings = Settings()
+        assert settings.TOOL_CACHE_TTL_MS == 300000
+
+    def test_tool_cache_ttl_ms_from_env(self):
+        """Test TOOL_CACHE_TTL_MS can be set via environment."""
+        with patch.dict(os.environ, {"TOOL_CACHE_TTL_MS": "60000"}):
+            settings = Settings()
+            assert settings.TOOL_CACHE_TTL_MS == 60000
+
+    def test_tool_cache_scope_default(self):
+        """Test TOOL_CACHE_SCOPE defaults to 'public'."""
+        settings = Settings()
+        assert settings.TOOL_CACHE_SCOPE == "public"
+
+    def test_tool_cache_scope_from_env(self):
+        """Test TOOL_CACHE_SCOPE can be set via environment."""
+        with patch.dict(os.environ, {"TOOL_CACHE_SCOPE": "private"}):
+            settings = Settings()
+            assert settings.TOOL_CACHE_SCOPE == "private"
+
+    def test_tool_cache_ttl_ms_zero_disables(self):
+        """Test TOOL_CACHE_TTL_MS can be set to 0 to disable caching."""
+        with patch.dict(os.environ, {"TOOL_CACHE_TTL_MS": "0"}):
+            settings = Settings()
+            assert settings.TOOL_CACHE_TTL_MS == 0
+
 
 class TestValidateConfig:
     """Test the validate_config function."""
@@ -263,3 +291,29 @@ class TestLoadDotenvFallback:
             finally:
                 if saved is not None:
                     sys.modules[mod_key] = saved
+
+
+class TestSEP414TraceContextSettings:
+    """SEP-414: Trace context settings."""
+
+    def test_trace_context_enabled_default(self):
+        s = Settings()
+        assert s.MCP_TRACE_CONTEXT_ENABLED is True
+
+    def test_trace_context_from_env(self):
+        with patch.dict(os.environ, {"MCP_TRACE_CONTEXT_ENABLED": "false"}):
+            s = Settings()
+            assert s.MCP_TRACE_CONTEXT_ENABLED is False
+
+
+class TestSEP2133ExtensionSettings:
+    """SEP-2133: Extension framework settings."""
+
+    def test_extensions_enabled_default(self):
+        s = Settings()
+        assert s.MCP_EXTENSIONS_ENABLED is True
+
+    def test_extensions_from_env(self):
+        with patch.dict(os.environ, {"MCP_EXTENSIONS_ENABLED": "false"}):
+            s = Settings()
+            assert s.MCP_EXTENSIONS_ENABLED is False

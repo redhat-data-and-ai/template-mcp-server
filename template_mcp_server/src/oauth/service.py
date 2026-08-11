@@ -265,6 +265,21 @@ class OAuthService:
             "client_id_issued_at": int(time.time()),
         }
 
+    async def get_client_metadata(self, client_id: str) -> Optional[Dict[str, Any]]:
+        """Get client metadata for CIMD (SEP-991). Returns None if not found."""
+        client = await self.storage.get_client(client_id, self.issuer)
+        if not client:
+            return None
+        return {
+            "client_id": client["id"],
+            "client_name": client["name"],
+            "redirect_uris": client["redirect_uris"],
+            "grant_types": client["grant_types"],
+            "response_types": client["response_types"],
+            "scope": client["scope"],
+            "application_type": client["application_type"],
+        }
+
     async def store_access_token(self, token: str, token_data: Dict[str, Any]) -> bool:
         """Store an access token."""
         token_data["issuer"] = self.issuer
