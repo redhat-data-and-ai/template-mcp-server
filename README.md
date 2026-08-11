@@ -31,6 +31,8 @@ make install        # creates venv, installs deps + pre-commit hooks
 make local          # starts server on localhost:5001
 ```
 
+Pre-commit includes `gitleaks` and `detect-private-key` for secret scanning. Also enable [GitHub Secret Scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [Push Protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection) on the repository for defense in depth.
+
 Verify in another terminal:
 
 ```bash

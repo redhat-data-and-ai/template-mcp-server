@@ -1,6 +1,15 @@
+# Install: pip install pre-commit && pre-commit install
+#   (or: make install)
+# Run manually: pre-commit run --all-files
+#
+# Secret scanning: gitleaks + detect-private-key (same approach as usernaut / template-ui).
+# Also enable GitHub Secret Scanning + Push Protection on the repo:
+# https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning
+# https://docs.github.com/en/code-security/concepts/secret-security/push-protection
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -12,6 +21,13 @@ repos:
       - id: check-docstring-first
       - id: check-json
       - id: check-toml
+      - id: detect-private-key
+
+  # Secret detection (same approach as usernaut / template-ui)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.2

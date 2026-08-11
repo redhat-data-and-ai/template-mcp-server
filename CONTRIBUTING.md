@@ -28,7 +28,7 @@ Thank you for your interest in contributing! This guide explains the process for
    ```bash
    make install
    ```
-   This creates a virtual environment, installs all dependencies (including dev), and sets up pre-commit hooks.
+   This creates a virtual environment, installs all dependencies (including dev), and sets up pre-commit hooks (`gitleaks` and `detect-private-key` for secret scanning). Also enable [GitHub Secret Scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning) and [Push Protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection) on the repository for defense in depth.
 
 4. **Verify everything works:**
    ```bash
