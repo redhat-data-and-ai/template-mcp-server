@@ -1,0 +1,17 @@
+name: get_redhat_logo
+enabled: true
+handler: template_mcp_server.src.tools.redhat_logo_tool:get_redhat_logo
+display_name: Get Red Hat Logo
+description: Return the Red Hat logo as a base64 encoded PNG.
+params: []
+agent:
+  usecase: Retrieve Red Hat logo for presentations, documentation, or branding
+  instructions: |
+    1. Call function (no parameters needed)
+    2. Receive base64-encoded logo data
+  input_description: No input parameters required
+  output_description: Dictionary with status, operation, logo metadata (name, description, mimeType), base64 data, size info, and message
+  examples:
+    - get_redhat_logo()
+  prerequisites: None - logo file must exist in assets directory
+  related_tools: []

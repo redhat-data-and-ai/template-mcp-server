@@ -1,0 +1,27 @@
+name: generate_code_review_prompt
+enabled: true
+handler: template_mcp_server.src.tools.code_review_tool:generate_code_review_prompt
+display_name: Code Review Prompt Generator
+description: Generate a structured code review prompt for external AI analysis.
+params:
+  - name: code
+    type: string
+    required: true
+    description: Source code to review
+  - name: language
+    type: string
+    required: false
+    default: python
+    description: Programming language of the code
+agent:
+  usecase: Analyze code for quality, bugs, and improvements using external AI service
+  instructions: |
+    1. Provide source code as string
+    2. Specify programming language
+    3. Receive formatted review prompt
+  input_description: 'code (string): source code to review, language (string, optional): programming language (default: "python")'
+  output_description: Dictionary with status, operation, language, formatted prompt text, and message
+  examples:
+    - 'generate_code_review_prompt("def hello(): print(''world'')", "python")'
+  prerequisites: Have source code ready for analysis
+  related_tools: []

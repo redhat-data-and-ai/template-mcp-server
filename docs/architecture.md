@@ -1,176 +1,122 @@
 # Architecture
 
-## System Architecture
+## Overview
+
+High-level view of the template MCP server. Details are broken out in the zoom-in diagrams below.
 
 ```mermaid
-graph TB
-    subgraph "External Clients"
-        A[Claude Code/LLM Client]
-        B[Custom MCP Client]
-        C[Development Tools]
+flowchart TB
+    subgraph clients [Clients]
+        Client[MCP Client]
     end
 
-    subgraph "Network Layer"
-        D[Load Balancer/Proxy]
-        E[SSL Termination]
+    subgraph server [Template MCP Server]
+        API["FastAPI (api.py)<br/>/health · /mcp"]
+        Core["MCP Core (mcp.py + FastMCP)"]
+        Loader[tools_loader.py]
+        Handlers["Python handlers (src/tools/)"]
     end
 
-    subgraph "Template MCP Server"
-        subgraph "Application Layer"
-            F[FastAPI Application<br/>api.py]
-            G[Health Check Endpoint<br/>/health]
-            H[MCP Protocol Handler<br/>/mcp]
-        end
-
-        subgraph "MCP Core"
-            I[TemplateMCPServer<br/>mcp.py]
-            J[FastMCP Instance<br/>Protocol Implementation]
-            K[Tool Registry<br/>Dynamic Registration]
-        end
-
-        subgraph "Tool Layer"
-            L[Mathematical Tools<br/>multiply_numbers]
-            M[Logo Tool<br/>get_redhat_logo]
-            N[Code Review Tool<br/>generate_code_review_prompt]
-            O[Custom Tools<br/>Extensible]
-        end
-
-        subgraph "Infrastructure Layer"
-            P[Configuration Management<br/>settings.py]
-            Q[Structured Logging<br/>pylogger.py]
-            R[Error Handling<br/>Exception Management]
-            S[Asset Management<br/>Static Resources]
-        end
-
-        subgraph "Transport Layer"
-            T[HTTP Transport]
-            U[SSE Transport]
-            V[Streamable HTTP Transport]
-        end
+    subgraph config [Configuration]
+        YAML["Tool YAML (config/tools/)"]
+        Env["Environment (.env)"]
     end
 
-    subgraph "External Dependencies"
-        W[Environment Variables<br/>.env]
-        X[SSL Certificates<br/>TLS/HTTPS]
-        Y[Static Assets<br/>Images/Files]
-        Z[Container Runtime<br/>Docker/Podman]
-    end
-
-    A --> D
-    B --> D
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    F --> H
-    H --> I
-    I --> J
-    J --> K
-    K --> L
-    K --> M
-    K --> N
-    K --> O
-    I --> P
-    I --> Q
-    I --> R
-    M --> S
-    F --> T
-    F --> U
-    F --> V
-    P --> W
-    E --> X
-    S --> Y
-    Z --> F
-
-    classDef client fill:#e3f2fd
-    classDef network fill:#f3e5f5
-    classDef application fill:#e8f5e8
-    classDef core fill:#fff3e0
-    classDef tools fill:#fce4ec
-    classDef infrastructure fill:#f1f8e9
-    classDef transport fill:#fef7e0
-    classDef external fill:#f5f5f5
-
-    class A,B,C client
-    class D,E network
-    class F,G,H application
-    class I,J,K core
-    class L,M,N,O tools
-    class P,Q,R,S infrastructure
-    class T,U,V transport
-    class W,X,Y,Z external
+    Client --> API
+    API --> Core
+    Core --> Loader
+    YAML --> Loader
+    Loader --> Handlers
+    Env -.-> Core
 ```
 
-## Control Flow
+| Box | Role |
+|-----|------|
+| **FastAPI** | HTTP entry point — health checks and MCP JSON-RPC |
+| **MCP Core** | FastMCP server instance; registers tools at startup |
+| **tools_loader.py** | Reads YAML, imports handlers, builds callables |
+| **config/tools/** | Tool surface — name, params, metadata, `handler` |
+| **src/tools/** | Tool behavior — validation, logic, return dict |
+| **.env** | Host, port, auth, secrets (not tool definitions) |
+
+## Zoom-in: Request path
+
+What happens when a client sends an HTTP request:
 
 ```mermaid
 flowchart TD
-    A[MCP Client Request] --> B{Transport Protocol?}
+    Req[Client HTTP request] --> Path{URL path?}
 
-    B -->|HTTP/Streamable-HTTP| C[FastAPI App<br/>api.py]
-    B -->|SSE| D[SSE App<br/>create_sse_app]
+    Path -->|/health| Health[Return healthy status]
+    Path -->|/mcp| Rpc[MCP JSON-RPC handler]
 
-    C --> E[Health Check?]
-    D --> E
+    Rpc --> Method{RPC method?}
 
-    E -->|/health| F[Health Endpoint<br/>Return Status]
-    E -->|/mcp| G[MCP Request Handler<br/>FastMCP Instance]
+    Method -->|tools/list| List[Return registered tool definitions]
+    Method -->|tools/call| Call[Invoke YAML-built wrapper]
 
-    G --> H{MCP Method Type?}
+    Call --> Handler[Python handler in src/tools/]
+    Handler --> Result[Structured dict response]
 
-    H -->|tools/list| I[List Available Tools<br/>Return tool definitions]
-    H -->|tools/call| J[Tool Execution Router<br/>mcp.py]
-
-    J --> K{Which Tool?}
-
-    K -->|multiply_numbers| L[Multiply Tool<br/>multiply_tool.py]
-    K -->|get_redhat_logo| M[Logo Tool<br/>redhat_logo_tool.py]
-    K -->|generate_code_review_prompt| N[Code Review Tool<br/>code_review_tool.py]
-
-    L --> O[Validate Input<br/>Check numeric types]
-    M --> P[Read Asset File<br/>Base64 encode PNG]
-    N --> Q[Generate Prompt<br/>Format code review template]
-
-    O --> R[Perform Calculation<br/>a * b]
-    P --> S[Return Image Data<br/>MIME type + base64]
-    Q --> T[Return Prompt Array<br/>Structured messages]
-
-    R --> U[Log Result<br/>Structured logging]
-    S --> U
-    T --> U
-
-    U --> V[Return Success Response<br/>JSON format]
-
-    V --> W[Send to MCP Client<br/>Complete request cycle]
-
-    F --> W
-    I --> W
-
-    X[Configuration Loading<br/>settings.py] --> Y[Environment Variables<br/>.env file]
-    Y --> Z[Pydantic Validation<br/>Type checking & defaults]
-    Z --> AA[Server Startup<br/>main.py]
-    AA --> C
-    AA --> D
-
-    BB[Error Handling] --> CC[Structured Logging<br/>pylogger.py]
-    CC --> DD[JSON Output<br/>Timestamp + Context]
-
-    O --> BB
-    P --> BB
-    Q --> BB
-
-    classDef request fill:#e3f2fd
-    classDef routing fill:#f3e5f5
-    classDef tools fill:#e8f5e8
-    classDef config fill:#fff3e0
-    classDef logging fill:#fce4ec
-
-    class A,B,E,H,K request
-    class C,D,G,J routing
-    class L,M,N,O,P,Q,R,S,T tools
-    class X,Y,Z,AA config
-    class BB,CC,DD logging
+    Health --> Done[HTTP response]
+    List --> Done
+    Result --> Done
 ```
+
+Transport selection (HTTP, SSE, streamable-HTTP) is configured via `MCP_TRANSPORT_PROTOCOL` in `api.py`. The request routing above is the same regardless of transport.
+
+## Tools config-as-code
+
+The template separates **tool surface** (YAML) from **tool behavior** (Python). This mirrors the config-as-code pattern used by `template-agent`: operational definitions live in config files; the runtime loads them at startup.
+
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| Tool surface | `config/tools/*.yaml` | Name, description, params, agent metadata, `enabled`, `handler` |
+| Tool behavior | `src/tools/*.py` | Validation, business logic, structured return dict |
+| Loader | `src/tools_loader.py` | Validate YAML, import handler, build FastMCP callable |
+| Registration | `src/mcp.py` | Register all enabled tools with FastMCP at startup |
+| Secrets / bind | `.env` | Host, port, auth, database — unchanged |
+
+Override the config directory with `MCP_TOOLS_CONFIG_PATH` (for example, an OpenShift ConfigMap mount).
+
+### Zoom-in: Tool loading (startup)
+
+Runs once when `TemplateMCPServer` initializes. Tools with `enabled: false` are skipped.
+
+```mermaid
+flowchart TD
+    A[Server startup] --> B[mcp.py calls load_tool_registry]
+    B --> C[Read YAML files from config/tools/]
+    C --> D[Validate each file with Pydantic]
+    D --> E["Import handler (module:attr)"]
+    E --> F[Build wrapper with name, signature, docstring]
+    F --> G[Register each tool with FastMCP]
+    G --> H[Server ready — tools/list available]
+```
+
+### Zoom-in: Tool invocation (runtime)
+
+Runs on every `tools/call` request:
+
+```mermaid
+sequenceDiagram
+    participant Client as MCP Client
+    participant API as FastAPI
+    participant FastMCP as FastMCP
+    participant Wrapper as YAML wrapper
+    participant Handler as Python handler
+
+    Client->>API: POST /mcp tools/call
+    API->>FastMCP: Route request
+    FastMCP->>Wrapper: Call with typed args
+    Wrapper->>Handler: Delegate to handler
+    Handler-->>Wrapper: Dict result
+    Wrapper-->>FastMCP: Response
+    FastMCP-->>API: MCP result
+    API-->>Client: JSON-RPC response
+```
+
+**Adding a tool** requires only a handler file and a YAML config — no changes to `mcp.py`. See the [Tutorial](tutorial.md).
 
 ## Code Structure
 
@@ -178,11 +124,18 @@ flowchart TD
 template-mcp-server/
 ├── template_mcp_server/           # Main package directory
 │   ├── __init__.py
+│   ├── config/                    # Tool config-as-code (YAML)
+│   │   └── tools/                 # One YAML file per tool
+│   │       ├── multiply_numbers.yaml
+│   │       ├── generate_code_review_prompt.yaml
+│   │       ├── get_redhat_logo.yaml
+│   │       └── README.md
 │   ├── src/                       # Core source code
 │   │   ├── __init__.py
 │   │   ├── main.py               # Application entry point & startup logic
 │   │   ├── api.py                # FastAPI application & transport setup
-│   │   ├── mcp.py                # MCP server implementation & tool registration
+│   │   ├── mcp.py                # MCP server — registers tools from loader
+│   │   ├── tools_loader.py       # Load YAML configs, build FastMCP callables
 │   │   ├── settings.py           # Pydantic-based configuration management
 │   │   ├── assets/               # Static resource files
 │   │   │   └── redhat.png        # Example image asset
@@ -196,11 +149,12 @@ template-mcp-server/
 │   │   ├── storage/              # Persistent storage
 │   │   │   ├── __init__.py
 │   │   │   └── storage_service.py # PostgreSQL token storage
-│   │   └── tools/                # MCP tool implementations
+│   │   └── tools/                # MCP tool handlers (behavior only)
 │   │       ├── __init__.py
-│   │       ├── multiply_tool.py          # Mathematical operations tool
-│   │       ├── code_review_tool.py       # Code review prompt generator
-│   │       └── redhat_logo_tool.py       # Base64 image resource handler
+│   │       ├── README.md                 # Handler development guide
+│   │       ├── multiply_tool.py          # multiply_numbers handler
+│   │       ├── code_review_tool.py       # generate_code_review_prompt handler
+│   │       └── redhat_logo_tool.py       # get_redhat_logo handler
 │   └── utils/                    # Shared utilities
 │       ├── __init__.py
 │       └── pylogger.py          # Structured logging with structlog
@@ -216,7 +170,8 @@ template-mcp-server/
 │   ├── test_settings.py         # Configuration tests
 │   ├── test_storage_init.py     # Storage init tests
 │   ├── test_storage_service.py  # Storage service tests
-│   ├── test_tools.py            # Tool unit tests
+│   ├── test_tools.py            # Tool handler unit tests
+│   ├── test_tools_loader.py     # YAML loader and registry tests
 │   └── test_utils.py            # Utility tests
 ├── examples/                     # Client examples
 │   ├── fastmcp_client.py        # FastMCP client example
@@ -244,9 +199,11 @@ template-mcp-server/
 
 - **`main.py`**: Application entry point with configuration validation, error handling, and uvicorn server startup
 - **`api.py`**: FastAPI application setup with transport protocol selection (HTTP/SSE/streamable-HTTP) and health endpoints
-- **`mcp.py`**: Core MCP server class that registers tools using FastMCP decorators
+- **`mcp.py`**: Core MCP server class — loads and registers tools from YAML via `tools_loader`
+- **`tools_loader.py`**: Reads `config/tools/*.yaml`, imports handlers, builds FastMCP callables with signatures and docstrings
+- **`config/tools/`**: Per-tool YAML definitions (name, params, agent metadata, `handler`, `enabled`)
 - **`settings.py`**: Environment-based configuration using Pydantic BaseSettings with validation
-- **`tools/`**: MCP tool implementations demonstrating arithmetic, prompts, and resource access patterns
+- **`tools/`**: Python handlers — validation, business logic, structured return dicts (metadata lives in YAML)
 - **`oauth/`**: OAuth 2.0 integration — controller, handler, models, routes, service (see [Authentication Guide](authentication.md))
 - **`storage/storage_service.py`**: PostgreSQL-backed `StorageService` for persistent token and client storage. Used by the OAuth layer to store authorization codes, access tokens, refresh tokens, and registered clients. Requires PostgreSQL when auth is enabled; initialized at server startup via `oauth/service.py`
 - **`utils/pylogger.py`**: Structured JSON logging using structlog with comprehensive processors

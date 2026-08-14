@@ -5,7 +5,8 @@ Comprehensive testing for MCP server reliability, security, and functionality.
 ## 📁 **Test Structure**
 
 - `conftest.py` - Pytest configuration and shared fixtures
-- `test_tools.py` - All MCP tools testing (core functionality)
+- `test_tools.py` - Tool handler unit tests (core functionality)
+- `test_tools_loader.py` - YAML config loader and registry tests
 - `test_mcp.py` - MCP server registration and protocol
 - `test_api.py` - FastAPI endpoints and health checks
 - `test_main.py` - Server startup and integration
@@ -64,7 +65,15 @@ def test_your_new_tool():
 
 ### **Testing Tool Registration:**
 ```python
-# tests/test_mcp.py - Verify tools are registered
+# tests/test_tools_loader.py - Verify YAML configs load correctly
+
+def test_load_tool_registry_registers_enabled_tools():
+    registry = load_tool_registry()
+    assert "your_new_tool" in registry
+```
+
+```python
+# tests/test_mcp.py - Verify server registers tools at startup
 
 def test_your_tool_registration(mcp_server):
     """Verify your tool is properly registered."""

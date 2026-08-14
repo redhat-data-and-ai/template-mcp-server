@@ -12,6 +12,7 @@ The template includes three example MCP tools: a multiply calculator, a code rev
 
 ## Features
 
+- **Config-as-code tools** — tool surface in YAML (`config/tools/`), behavior in Python handlers
 - **FastMCP + FastAPI** with multiple transport protocols (HTTP, SSE, streamable-HTTP)
 - **Three example tools**: multiply calculator, code review prompt, Red Hat logo
 - **Pydantic configuration** via environment variables
@@ -88,6 +89,7 @@ After creating your project, replace all references to `template-mcp-server` and
 | `.github/workflows/`    | Workflow names and paths                                                                                                      |
 | `README.md`             | Title, description, clone URL, and all badge URLs (tests, coverage, Codespaces)                                               |
 | `.env.example`          | Adjust defaults if your server uses a different port or protocol                                                              |
+| `template_mcp_server/config/tools/` | Add/rename tool YAML configs when forking                                                              |
 
 ### Verify Rename
 
@@ -111,8 +113,26 @@ The output should be empty (or only match this README section itself).
 | `ENABLE_AUTH`               | `False`*    | Enable OAuth authentication (see [Auth Guide](docs/authentication.md)) |
 | `USE_EXTERNAL_BROWSER_AUTH` | `False`     | Browser-based OAuth for local dev                                    |
 | `PYTHON_LOG_LEVEL`          | `INFO`      | Logging level                                                        |
+| `MCP_TOOLS_CONFIG_PATH`     | *(bundled)* | Directory of per-tool YAML configs (default: `template_mcp_server/config/tools`) |
 
 *\* `ENABLE_AUTH` defaults to `False` in `.env.example` but `True` in code. Always copy `.env.example` to `.env` to start with auth disabled.*
+
+## Tools config-as-code
+
+Tool **surface** (name, description, parameters, agent metadata) lives in YAML. Tool **behavior** lives in Python handlers under `src/tools/`. The server loads configs at startup — no `mcp.py` edits when adding a tool.
+
+```
+template_mcp_server/
+├── config/tools/           # One YAML file per tool
+│   ├── multiply_numbers.yaml
+│   └── ...
+└── src/
+    ├── tools_loader.py     # Load YAML → import handler → register
+    ├── tools/              # Handler implementations only
+    └── mcp.py              # Registers all tools from the loader
+```
+
+See [Architecture — Overview](docs/architecture.md#overview) for diagrams (overview, request path, tool loading, tool invocation). To add a tool, follow [docs/tutorial.md](docs/tutorial.md).
 
 ## Documentation
 

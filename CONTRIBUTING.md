@@ -204,14 +204,29 @@ async def my_tool(param: str) -> Dict[str, Any]:
            return {"status": "error", "error": str(e)}
    ```
 
-2. **Register in MCP server** (`template_mcp_server/src/mcp.py`):
-   ```python
-   from template_mcp_server.src.tools.your_tool import your_tool_function
-
-   def _register_mcp_tools(self) -> None:
-       # ... existing registrations ...
-       self.mcp.tool()(your_tool_function)
+2. **Add tool config** (`template_mcp_server/config/tools/your_tool.yaml`):
+   ```yaml
+   name: your_tool_function
+   enabled: true
+   handler: template_mcp_server.src.tools.your_tool:your_tool_function
+   display_name: Your Tool
+   description: What the tool does.
+   params:
+     - name: param
+       type: string
+       required: true
+   agent:
+     usecase: When to use this tool
+     instructions: Step-by-step usage
+     input_description: Expected input format
+     output_description: Expected output format
+     examples:
+       - your_tool_function("test")
+     prerequisites: none
+     related_tools: []
    ```
+
+   No changes to `mcp.py` are required — the server loads YAML configs at startup.
 
 3. **Add tests** in `tests/`:
    ```python
