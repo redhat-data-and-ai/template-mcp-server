@@ -25,7 +25,7 @@ src/
 ## 🚀 **Quick Start**
 
 1. **Add your handler** → `tools/your_domain_tool.py`
-2. **Add tool config** → `config/tools/your_domain_tool.yaml`
+2. **Add tool config** → `../config/tools/your_domain_tool.yaml`
 3. **Add static assets** → `assets/your_file.png`
 4. **Test** → `pytest tests/test_tools.py`
 

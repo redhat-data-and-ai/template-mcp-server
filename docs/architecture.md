@@ -120,7 +120,7 @@ sequenceDiagram
 
 ## Code Structure
 
-```
+```text
 template-mcp-server/
 ├── template_mcp_server/           # Main package directory
 │   ├── __init__.py

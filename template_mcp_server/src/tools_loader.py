@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Type, cast
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from template_mcp_server.utils.pylogger import get_python_logger
 
@@ -29,6 +29,8 @@ TYPE_ALIASES: dict[str, type] = {
 class ToolParamConfig(BaseModel):
     """Schema for a single tool parameter declared in YAML."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     type: str = "str"
     required: bool = True
@@ -43,6 +45,8 @@ class ToolParamConfig(BaseModel):
 class AgentMetadata(BaseModel):
     """Agent-facing metadata for tool discovery and routing."""
 
+    model_config = ConfigDict(extra="forbid")
+
     usecase: str = ""
     instructions: str = ""
     input_description: str = ""
@@ -54,6 +58,8 @@ class AgentMetadata(BaseModel):
 
 class ToolConfig(BaseModel):
     """Full tool definition loaded from a YAML file."""
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str
     enabled: bool = True

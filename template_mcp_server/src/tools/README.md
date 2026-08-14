@@ -1,6 +1,6 @@
 # MCP Tools Directory
 
-Handlers implement tool **behavior**. Tool **surface** (name, description, params, agent metadata) lives in [`../config/tools/`](../config/tools/).
+Handlers implement tool **behavior**. Tool **surface** (name, description, params, agent metadata) lives in [`../../config/tools/`](../../config/tools/).
 
 ## Add a tool
 

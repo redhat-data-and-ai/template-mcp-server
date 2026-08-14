@@ -226,6 +226,8 @@ async def my_tool(param: str) -> Dict[str, Any]:
      related_tools: []
    ```
 
+   Each tool `name` must be unique across all YAML files in `template_mcp_server/config/tools/` — duplicate names are rejected by `load_tool_configs` before registration.
+
    No changes to `mcp.py` are required — the server loads YAML configs at startup.
 
 3. **Add tests** in `tests/`:

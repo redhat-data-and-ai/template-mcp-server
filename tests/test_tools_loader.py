@@ -165,6 +165,18 @@ class TestToolsLoader:
         with pytest.raises(ValueError, match="No enabled tools found"):
             load_tool_registry(tools_dir)
 
+    def test_load_tool_configs_rejects_unknown_yaml_fields(self, tmp_path: Path):
+        tools_dir = tmp_path / "tools"
+        tools_dir.mkdir()
+        (tools_dir / "bad.yaml").write_text(
+            "name: bad_tool\nenabled: true\n"
+            "handler: template_mcp_server.src.tools.multiply_tool:multiply_numbers\n"
+            "display_name: Bad\ndescription: Bad tool\n"
+            "typo_field: oops\n"
+        )
+        with pytest.raises(Exception, match="extra_forbidden|Extra inputs"):
+            load_tool_configs(tools_dir)
+
     def test_build_agent_docstring_formats_related_tools(self):
         config = ToolConfig(
             name="example",

@@ -121,7 +121,7 @@ The output should be empty (or only match this README section itself).
 
 Tool **surface** (name, description, parameters, agent metadata) lives in YAML. Tool **behavior** lives in Python handlers under `src/tools/`. The server loads configs at startup — no `mcp.py` edits when adding a tool.
 
-```
+```text
 template_mcp_server/
 ├── config/tools/           # One YAML file per tool
 │   ├── multiply_numbers.yaml
