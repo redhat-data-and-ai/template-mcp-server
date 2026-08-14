@@ -6,8 +6,10 @@ Tool **behavior** lives in `template_mcp_server/src/tools/` as Python handlers.
 ## Add a tool
 
 1. Create a handler in `src/tools/your_tool.py`.
-2. Add `your_tool.yaml` in this directory with an explicit `handler:` reference.
+2. Copy [`tool_template.yaml.example`](tool_template.yaml.example) to `your_tool.yaml` and edit it (the `.yaml.example` suffix keeps it out of the `*.yaml` loader glob).
 3. Restart the server (no changes to `mcp.py` required).
+
+For a full walkthrough, see [docs/tutorial.md](../../../docs/tutorial.md).
 
 ## Example
 
