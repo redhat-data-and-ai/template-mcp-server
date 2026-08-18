@@ -1,0 +1,31 @@
+name: send_email
+enabled: true
+handler: template_mcp_server.src.tools.email_tool:send_email
+display_name: Send Email
+description: Send HTML email via the Resend API.
+params:
+  - name: email_id
+    type: string
+    required: true
+    description: Recipient email address
+  - name: subject
+    type: string
+    required: true
+    description: Email subject line (max 255 characters)
+  - name: body
+    type: string
+    required: true
+    description: HTML body content
+agent:
+  usecase: Send email to a recipient with subject and HTML body
+  instructions: |
+    1. Validate recipient email if needed (validate_email)
+    2. Provide recipient, subject, and HTML body
+    3. Receive delivery status string
+  input_description: "email_id (string), subject (string), body (string, HTML)"
+  output_description: String status message confirming send or describing the error
+  examples:
+    - send_email("user@example.com", "Hello", "<p>Hi there</p>")
+  prerequisites: RESEND_API_KEY configured; optional RESEND_FROM_EMAIL and RESEND_TO_EMAIL
+  related_tools:
+    - validate_email

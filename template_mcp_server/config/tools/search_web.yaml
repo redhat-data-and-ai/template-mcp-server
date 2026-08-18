@@ -1,0 +1,28 @@
+name: search_web
+enabled: true
+handler: template_mcp_server.src.tools.web_search_tool:search_web
+display_name: Web Search
+description: Search the web using the Tavily API with parallel queries and deduplicated results.
+params:
+  - name: queries
+    type: array
+    required: true
+    description: List of search query strings to run in parallel
+  - name: max_results
+    type: integer
+    required: false
+    default: 5
+    description: Maximum results per query (1-10)
+agent:
+  usecase: Find current information from the web for research or fact-checking
+  instructions: |
+    1. Provide one or more search query strings
+    2. Optionally set max_results per query (default 5)
+    3. Receive deduplicated results with title, url, snippet, and score
+  input_description: 'queries (array of strings), max_results (int, optional, default 5)'
+  output_description: Dictionary with status, queries, total_results, results list, and message
+  examples:
+    - search_web(["latest AI news"], 5)
+    - search_web(["Python 3.13 features", "asyncio best practices"])
+  prerequisites: TAVILY_API_KEY configured
+  related_tools: []

@@ -343,6 +343,17 @@ class Settings(BaseSettings):
             "example": 30.0,
         },
     )
+    MCP_TOOLS_CONFIG_PATH: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "MCP_TOOLS_CONFIG_PATH",
+            "description": (
+                "Optional path to directory of per-tool YAML configs "
+                "(default: template_mcp_server/config/tools)"
+            ),
+            "example": "/etc/mcp/tools",
+        },
+    )
 
 
 def validate_config(settings: Settings) -> None:
