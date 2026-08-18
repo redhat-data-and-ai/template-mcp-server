@@ -7,12 +7,7 @@ tools for MCP clients. It uses FastMCP to register and manage MCP capabilities.
 from fastmcp import FastMCP
 
 from template_mcp_server.src.settings import settings
-from template_mcp_server.src.tools.bmi_tool import calculate_bmi
-from template_mcp_server.src.tools.email_tool import (
-    send_email,
-)
-from template_mcp_server.src.tools.validate_email_tool import validate_email
-from template_mcp_server.src.tools.web_search_tool import search_web
+from template_mcp_server.src.tools_loader import load_tool_registry
 from template_mcp_server.utils.pylogger import (
     force_reconfigure_all_loggers,
     get_python_logger,
@@ -46,18 +41,11 @@ class TemplateMCPServer:
             raise
 
     def _register_mcp_tools(self) -> None:
-        """Register MCP tools for template operations (tools-first architecture).
+        """Register MCP tools from config/tools YAML definitions.
 
-        Registers all available tools with the FastMCP server instance.
-        In tools-first architecture, the server only provides tools.
-        Currently includes:
-        - calculate_bmi: BMI calculator
-        - search_web: Web search using Tavily API for current information
-        - send_email: Email operations
-        - validate_email: Email format validation
+        Tools are loaded from YAML config (see template_mcp_server/config/tools/)
+        and wired to Python handlers via explicit handler: module:attr references.
         """
-        # Register all the imported tools
-        self.mcp.tool()(calculate_bmi)
-        self.mcp.tool()(search_web)
-        self.mcp.tool()(send_email)
-        self.mcp.tool()(validate_email)
+        registry = load_tool_registry()
+        for tool_fn in registry.values():
+            self.mcp.tool()(tool_fn)
