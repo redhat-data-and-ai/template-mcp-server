@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 import httpx
 
-from template_mcp_server.src.oauth.handler import SCOPE, OAuth2Handler
+from template_mcp_server.src.oauth.handler import OAuth2Handler
+from template_mcp_server.src.settings import Settings, parse_sso_scopes
 
 
 class TestOAuth2Handler:
@@ -14,6 +15,9 @@ class TestOAuth2Handler:
         """Test creating OAuth session without state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
+        default_scopes = Settings.model_fields["SSO_SCOPES"].default
+        expected_scope = parse_sso_scopes(default_scopes)
+        mock_settings.oauth_scopes = expected_scope
 
         with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
@@ -23,7 +27,7 @@ class TestOAuth2Handler:
 
             mock_oauth.assert_called_once_with(
                 "test_client_id",
-                scope=SCOPE,
+                scope=expected_scope,
                 redirect_uri="http://localhost:3000/callback",
                 state=None,
             )
@@ -34,6 +38,9 @@ class TestOAuth2Handler:
         """Test creating OAuth session with state."""
         mock_settings.SSO_CLIENT_ID = "test_client_id"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
+        default_scopes = Settings.model_fields["SSO_SCOPES"].default
+        expected_scope = parse_sso_scopes(default_scopes)
+        mock_settings.oauth_scopes = expected_scope
 
         with patch("template_mcp_server.src.oauth.handler.OAuth2Session") as mock_oauth:
             mock_session = Mock()
@@ -43,7 +50,7 @@ class TestOAuth2Handler:
 
             mock_oauth.assert_called_once_with(
                 "test_client_id",
-                scope=SCOPE,
+                scope=expected_scope,
                 redirect_uri="http://localhost:3000/callback",
                 state="test_state",
             )
@@ -114,11 +121,12 @@ class TestOAuth2Handler:
         assert result == mock_token
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_success(self, mock_post, mock_settings):
         """Test successful token introspection."""
         mock_settings.SSO_CLIENT_ID = "client123"
         mock_settings.SSO_CLIENT_SECRET = "secret123"
+        mock_settings.SSO_INTROSPECTION_MODE = "rfc7662"
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -140,7 +148,7 @@ class TestOAuth2Handler:
         assert result == {"active": True, "sub": "user123"}
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_http_error(self, mock_post, mock_settings):
         """Test token introspection with HTTP error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -154,7 +162,7 @@ class TestOAuth2Handler:
         assert "Introspection failed" in result["error"]
 
     @patch("template_mcp_server.src.oauth.handler.settings")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_introspect_token_unexpected_error(self, mock_post, mock_settings):
         """Test token introspection with unexpected error."""
         mock_settings.SSO_CLIENT_ID = "client123"
@@ -257,18 +265,13 @@ class TestOAuth2Handler:
         result = OAuth2Handler.verify_authorization_header("Basic token123")
         assert result is None
 
-    def test_scope_constant(self):
-        """Test SCOPE constant is correctly defined."""
-        expected_scope = ["email", "openid", "profile", "session:role-any"]
-        assert SCOPE == expected_scope
-
 
 class TestOAuth2HandlerIntegration:
     """Integration tests for OAuth2Handler."""
 
     @patch("template_mcp_server.src.oauth.handler.settings")
     @patch("template_mcp_server.src.oauth.handler.OAuth2Session")
-    @patch("template_mcp_server.src.oauth.handler.httpx.post")
+    @patch("template_mcp_server.src.oauth.introspection.httpx.post")
     def test_full_oauth_flow_simulation(
         self, mock_post, mock_oauth_session, mock_settings
     ):
@@ -277,6 +280,7 @@ class TestOAuth2HandlerIntegration:
         mock_settings.SSO_CLIENT_ID = "client123"
         mock_settings.SSO_CLIENT_SECRET = "secret123"
         mock_settings.SSO_CALLBACK_URL = "http://localhost:3000/callback"
+        mock_settings.oauth_scopes = ["openid", "email", "profile"]
 
         # Mock OAuth session
         mock_session = Mock()
