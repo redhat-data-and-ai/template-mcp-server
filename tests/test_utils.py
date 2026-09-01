@@ -1,5 +1,6 @@
 """Tests for the utils module."""
 
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,9 +13,11 @@ from template_mcp_server.utils.pylogger import (
     ML_AI_LOGGERS,
     OBSERVABILITY_LOGGERS,
     THIRD_PARTY_LOGGERS,
+    MCPConnectionErrorFilter,
     _clear_handlers,
     _configure_third_party_loggers,
     _setup_logger,
+    attach_mcp_connection_error_filter,
     force_reconfigure_all_loggers,
     get_python_logger,
     get_uvicorn_log_config,
@@ -578,3 +581,166 @@ class TestPylogger:
 
         # Assert - the flag should be True after force_reconfigure (since it calls get_python_logger)
         assert pylogger_module._LOGGING_CONFIGURED is True
+
+
+class TestMCPConnectionErrorFilter:
+    """Test the MCPConnectionErrorFilter class."""
+
+    def test_filter_downgrades_client_disconnected(self):
+        """Test that 'client disconnected' is downgraded to DEBUG."""
+        # Arrange
+        log_filter = MCPConnectionErrorFilter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Client disconnected: connection closed",
+            args=(),
+            exc_info=None,
+        )
+
+        # Act
+        result = log_filter.filter(record)
+
+        # Assert
+        assert result is True
+        assert record.levelno == logging.DEBUG
+        assert record.levelname == "DEBUG"
+
+    def test_filter_downgrades_connection_reset(self):
+        """Test that 'connection reset' is downgraded to DEBUG."""
+        # Arrange
+        log_filter = MCPConnectionErrorFilter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Connection reset by peer",
+            args=(),
+            exc_info=None,
+        )
+
+        # Act
+        result = log_filter.filter(record)
+
+        # Assert
+        assert result is True
+        assert record.levelno == logging.DEBUG
+        assert record.levelname == "DEBUG"
+
+    def test_filter_downgrades_broken_pipe(self):
+        """Test that 'broken pipe' is downgraded to DEBUG."""
+        # Arrange
+        log_filter = MCPConnectionErrorFilter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Broken pipe: EPIPE",
+            args=(),
+            exc_info=None,
+        )
+
+        # Act
+        result = log_filter.filter(record)
+
+        # Assert
+        assert result is True
+        assert record.levelno == logging.DEBUG
+        assert record.levelname == "DEBUG"
+
+    def test_filter_passes_unexpected_errors(self):
+        """Test that unexpected errors keep their original level."""
+        # Arrange
+        log_filter = MCPConnectionErrorFilter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Internal server error",
+            args=(),
+            exc_info=None,
+        )
+
+        # Act
+        result = log_filter.filter(record)
+
+        # Assert
+        assert result is True
+        assert record.levelno == logging.ERROR
+        assert record.levelname == "ERROR"
+
+    def test_filter_case_insensitive(self):
+        """Test that pattern matching is case-insensitive."""
+        # Arrange
+        log_filter = MCPConnectionErrorFilter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="CLIENT DISCONNECTED",
+            args=(),
+            exc_info=None,
+        )
+
+        # Act
+        result = log_filter.filter(record)
+
+        # Assert
+        assert result is True
+        assert record.levelno == logging.DEBUG
+
+    def test_expected_patterns_are_defined(self):
+        """Test that EXPECTED_PATTERNS contains the required patterns."""
+        # Assert
+        assert "client disconnected" in MCPConnectionErrorFilter.EXPECTED_PATTERNS
+        assert "connection reset" in MCPConnectionErrorFilter.EXPECTED_PATTERNS
+        assert "broken pipe" in MCPConnectionErrorFilter.EXPECTED_PATTERNS
+
+
+class TestAttachMCPConnectionErrorFilter:
+    """Test the attach_mcp_connection_error_filter function."""
+
+    @patch("template_mcp_server.utils.pylogger.logging")
+    def test_attach_filter_when_enabled(self, mock_logging):
+        """Test that filter is attached to target loggers when enabled."""
+        # Arrange
+        mock_mcp_logger = Mock()
+        mock_uvicorn_logger = Mock()
+        mock_starlette_logger = Mock()
+
+        def getLogger_side_effect(name):
+            loggers = {
+                "mcp": mock_mcp_logger,
+                "uvicorn.error": mock_uvicorn_logger,
+                "starlette": mock_starlette_logger,
+            }
+            return loggers.get(name, Mock())
+
+        mock_logging.getLogger.side_effect = getLogger_side_effect
+
+        # Act
+        attach_mcp_connection_error_filter(enabled=True)
+
+        # Assert
+        assert mock_mcp_logger.addFilter.call_count == 1
+        assert mock_uvicorn_logger.addFilter.call_count == 1
+        assert mock_starlette_logger.addFilter.call_count == 1
+
+        # Verify the filter is an MCPConnectionErrorFilter
+        filter_arg = mock_mcp_logger.addFilter.call_args[0][0]
+        assert isinstance(filter_arg, MCPConnectionErrorFilter)
+
+    @patch("template_mcp_server.utils.pylogger.logging")
+    def test_no_filter_when_disabled(self, mock_logging):
+        """Test that no filter is attached when disabled."""
+        # Act
+        attach_mcp_connection_error_filter(enabled=False)
+
+        # Assert
+        mock_logging.getLogger.assert_not_called()
