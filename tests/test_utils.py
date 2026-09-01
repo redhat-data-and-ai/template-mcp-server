@@ -9,11 +9,11 @@ from template_mcp_server.utils.pylogger import (
     AWS_LOGGERS,
     ERROR_ONLY_LOGGERS,
     HTTP_CLIENT_LOGGERS,
-    MCPConnectionErrorFilter,
     MCP_LOGGERS,
     ML_AI_LOGGERS,
     OBSERVABILITY_LOGGERS,
     THIRD_PARTY_LOGGERS,
+    MCPConnectionErrorFilter,
     _clear_handlers,
     _configure_third_party_loggers,
     _setup_logger,
@@ -591,8 +591,13 @@ class TestMCPConnectionErrorFilter:
         # Arrange
         log_filter = MCPConnectionErrorFilter()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="", lineno=0,
-            msg="Client disconnected: connection closed", args=(), exc_info=None,
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Client disconnected: connection closed",
+            args=(),
+            exc_info=None,
         )
 
         # Act
@@ -608,8 +613,13 @@ class TestMCPConnectionErrorFilter:
         # Arrange
         log_filter = MCPConnectionErrorFilter()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="", lineno=0,
-            msg="Connection reset by peer", args=(), exc_info=None,
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Connection reset by peer",
+            args=(),
+            exc_info=None,
         )
 
         # Act
@@ -625,8 +635,13 @@ class TestMCPConnectionErrorFilter:
         # Arrange
         log_filter = MCPConnectionErrorFilter()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="", lineno=0,
-            msg="Broken pipe: EPIPE", args=(), exc_info=None,
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Broken pipe: EPIPE",
+            args=(),
+            exc_info=None,
         )
 
         # Act
@@ -642,8 +657,13 @@ class TestMCPConnectionErrorFilter:
         # Arrange
         log_filter = MCPConnectionErrorFilter()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="", lineno=0,
-            msg="Internal server error", args=(), exc_info=None,
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Internal server error",
+            args=(),
+            exc_info=None,
         )
 
         # Act
@@ -659,8 +679,13 @@ class TestMCPConnectionErrorFilter:
         # Arrange
         log_filter = MCPConnectionErrorFilter()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="", lineno=0,
-            msg="CLIENT DISCONNECTED", args=(), exc_info=None,
+            name="test",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="CLIENT DISCONNECTED",
+            args=(),
+            exc_info=None,
         )
 
         # Act
