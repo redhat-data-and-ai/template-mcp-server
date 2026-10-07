@@ -108,7 +108,10 @@ class OAuthService:
             "state": state,
         }
 
-        await self.storage.store_authorization_code(auth_code, code_data)
+        stored = await self.storage.store_authorization_code(auth_code, code_data)
+        if not stored:
+            logger.error("Failed to persist authorization code")
+            raise RuntimeError("Failed to persist authorization code")
         return auth_code
 
     async def add_token_to_code(self, code: str, token_set: Dict[str, Any]) -> None:

@@ -196,6 +196,14 @@ class TestStorageServiceTables:
 
         # Should call execute multiple times for table and index creation
         assert mock_conn.execute.call_count >= 4  # 4 tables + indexes
+        executed_sql = " ".join(
+            call.args[0] for call in mock_conn.execute.call_args_list
+        )
+        assert (
+            "ALTER TABLE oauth_authorization_codes ALTER COLUMN state TYPE TEXT"
+            in executed_sql
+        )
+        assert "state TEXT" in executed_sql
 
     @pytest.mark.asyncio
     async def test_create_table_no_pool(self):
