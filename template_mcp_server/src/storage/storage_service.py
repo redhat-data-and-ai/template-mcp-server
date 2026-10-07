@@ -162,9 +162,20 @@ class StorageService:
             # Cursor's OAuth state (server name, workspace, attempt id) is
             # longer than 255 characters. CREATE TABLE IF NOT EXISTS does not
             # widen a column on a database that already created this table.
-            await conn.execute("""
-                ALTER TABLE oauth_authorization_codes ALTER COLUMN state TYPE TEXT
-            """)
+            # ALTER takes ACCESS EXCLUSIVE, so skip it once state is text.
+            state_type = await conn.fetchval(
+                """
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'oauth_authorization_codes'
+                  AND column_name = 'state'
+                """
+            )
+            if state_type != "text":
+                await conn.execute(
+                    "ALTER TABLE oauth_authorization_codes ALTER COLUMN state TYPE TEXT"
+                )
 
             # Create useful indexes
             await conn.execute(
