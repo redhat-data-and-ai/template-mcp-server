@@ -191,11 +191,54 @@ class TestStorageServiceTables:
 
         mock_pool.acquire = acquire
         service.pool = mock_pool
+        mock_conn.fetchval.return_value = "character varying"
 
         await service._create_table()
 
         # Should call execute multiple times for table and index creation
         assert mock_conn.execute.call_count >= 4  # 4 tables + indexes
+        executed_sql = " ".join(
+            call.args[0] for call in mock_conn.execute.call_args_list
+        )
+        assert (
+            "ALTER TABLE oauth_authorization_codes ALTER COLUMN state TYPE TEXT"
+            in executed_sql
+        )
+        assert "state TEXT" in executed_sql
+
+    @pytest.mark.asyncio
+    async def test_create_table_skips_state_alter_when_already_text(self):
+        """Do not take an exclusive lock when state is already text."""
+        service = StorageService()
+        mock_conn = AsyncMock()
+        mock_pool = AsyncMock()
+
+        class AsyncContextManagerMock:
+            def __init__(self, return_value):
+                self.return_value = return_value
+
+            async def __aenter__(self):
+                return self.return_value
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        def acquire():
+            return AsyncContextManagerMock(mock_conn)
+
+        mock_pool.acquire = acquire
+        service.pool = mock_pool
+        mock_conn.fetchval.return_value = "text"
+
+        await service._create_table()
+
+        executed_sql = " ".join(
+            call.args[0] for call in mock_conn.execute.call_args_list
+        )
+        assert (
+            "ALTER TABLE oauth_authorization_codes ALTER COLUMN state TYPE TEXT"
+            not in executed_sql
+        )
 
     @pytest.mark.asyncio
     async def test_create_table_no_pool(self):

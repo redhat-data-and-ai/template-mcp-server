@@ -851,6 +851,27 @@ class TestOAuthServiceEdgeCases:
             assert stored_data["scope"] == "read"
 
     @pytest.mark.asyncio
+    async def test_create_authorization_code_storage_failure(self):
+        """A failed insert must not hand the client a code that was never stored."""
+        from template_mcp_server.src.oauth.service import OAuthService
+        from template_mcp_server.src.storage.storage_service import StorageService
+
+        mock_storage = AsyncMock(spec=StorageService)
+        mock_storage.store_authorization_code.return_value = False
+
+        oauth_service = OAuthService(mock_storage)
+
+        with pytest.raises(RuntimeError, match="Failed to persist authorization code"):
+            await oauth_service.create_authorization_code(
+                client_id="test_client",
+                redirect_uri="http://localhost:3000/callback",
+                scope="read",
+                code_challenge="test_challenge",
+                code_challenge_method="S256",
+                state="x" * 300,
+            )
+
+    @pytest.mark.asyncio
     async def test_register_client_storage_failure(self):
         """Test client registration when storage fails."""
         from template_mcp_server.src.oauth.service import OAuthService
