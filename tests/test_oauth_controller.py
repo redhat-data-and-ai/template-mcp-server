@@ -41,6 +41,62 @@ class TestOAuthControllerHandleCallback:
 
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
+    async def test_handle_callback_missing_code(self, mock_settings):
+        """Test callback handling when code query param is missing."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
+
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": None,
+            "state": "state_123",
+        }.get(key)
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
+
+    @patch("template_mcp_server.src.oauth.controller.settings")
+    @pytest.mark.asyncio
+    async def test_handle_callback_missing_state(self, mock_settings):
+        """Test callback handling when state query param is missing."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
+
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": "auth_code_123",
+            "state": None,
+        }.get(key)
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
+
+    @patch("template_mcp_server.src.oauth.controller.settings")
+    @pytest.mark.asyncio
+    async def test_handle_callback_missing_session_data(self, mock_settings):
+        """Test callback handling with missing session data in production mode."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
+
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": "auth_code_123",
+            "state": "state_123",
+        }.get(key)
+
+        mock_request.session = {}
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
+
+    @patch("template_mcp_server.src.oauth.controller.settings")
+    @pytest.mark.asyncio
     async def test_handle_callback_local_development(self, mock_settings):
         """Test OAuth callback handling in local development mode."""
         mock_settings.USE_EXTERNAL_BROWSER_AUTH = True
@@ -153,6 +209,7 @@ class TestOAuthControllerHandleToken:
             "grant_type": "authorization_code",
             "code": "sso_code_123::sso_state_123",
             "redirect_uri": "https://www.cursor.com/agents/mcp/oauth/callback",
+            "client_id": "test_client",
             "code_verifier": "verifier123",
         }
 
@@ -600,6 +657,7 @@ class TestAuthorizationCodeGrantEdgeCases:
             grant_type="authorization_code",
             code="sso_code_123::sso_state_123",
             redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
+            client_id="test_client",
             code_verifier="test_verifier",
         )
 
@@ -643,6 +701,7 @@ class TestAuthorizationCodeGrantEdgeCases:
             grant_type="authorization_code",
             code="invalid_code::invalid_state",
             redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
+            client_id="test_client",
             code_verifier="test_verifier",
         )
 
@@ -659,6 +718,31 @@ class TestAuthorizationCodeGrantEdgeCases:
                 await controller.handle_authorization_code_grant(
                     token_request, oauth_service
                 )
+
+    @pytest.mark.asyncio
+    async def test_malformed_code_without_separator(self):
+        """Test authorization code grant with code missing :: separator."""
+        from template_mcp_server.src.oauth.models import (
+            AuthorizationCodeTokenRequest,
+        )
+
+        token_request = AuthorizationCodeTokenRequest(
+            grant_type="authorization_code",
+            code="no_separator_here",
+            redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
+            client_id="test_client",
+            code_verifier="test_verifier",
+        )
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await controller.handle_authorization_code_grant(
+                token_request, oauth_service
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["error"] == "invalid_grant"
 
 
 class TestRefreshTokenGrantEdgeCases:
