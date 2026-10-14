@@ -1,0 +1,23 @@
+name: validate_email
+enabled: true
+handler: template_mcp_server.src.tools.validate_email_tool:validate_email
+display_name: Email Validator
+description: Validate an email address format and return structured validation feedback.
+params:
+  - name: email
+    type: string
+    required: true
+    description: Email address to validate (e.g., user@example.com)
+agent:
+  usecase: Check whether an email address has a valid format before sending mail
+  instructions: |
+    1. Provide a single email address string
+    2. Receive valid flag, reason, and message
+  input_description: "email (string): address to validate"
+  output_description: Dictionary with status, valid, reason, email, and message
+  examples:
+    - validate_email("user@example.com")
+    - validate_email("not-an-email")
+  prerequisites: none
+  related_tools:
+    - send_email

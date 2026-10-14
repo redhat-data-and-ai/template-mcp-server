@@ -1,0 +1,28 @@
+name: calculate_bmi
+enabled: true
+handler: template_mcp_server.src.tools.bmi_tool:calculate_bmi
+display_name: BMI Calculator
+description: Calculate Body Mass Index from height and weight using WHO categories.
+params:
+  - name: height
+    type: string
+    required: true
+    description: Height in centimeters (e.g., "175")
+  - name: weight
+    type: string
+    required: true
+    description: Weight in kilograms (e.g., "70.5")
+agent:
+  usecase: Compute BMI and health category from height and weight
+  instructions: |
+    1. Provide height in centimeters as a string
+    2. Provide weight in kilograms as a string
+    3. Receive BMI value and WHO category
+  input_description: 'height (string): cm, weight (string): kg. Example: ("175", "70")'
+  output_description: Dictionary with status, bmi, category, height_cm, weight_kg, and message
+  examples:
+    - calculate_bmi("175", "70")
+    - calculate_bmi("180", "85.5")
+  prerequisites: none
+  related_tools:
+    - validate_email
