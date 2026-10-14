@@ -39,6 +39,15 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
     code = request.query_params.get("code")
     state = request.query_params.get("state")
 
+    if not code or not state:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Missing code or state parameter",
+            },
+        )
+
     if settings.USE_EXTERNAL_BROWSER_AUTH:
         token_set = OAuth2Handler.get_access_token_from_authorization_code_flow(
             code, state
@@ -56,11 +65,18 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
                 },
             )
 
-    redirect_uri_from_session = request.session.get("user_details").get("redirect_uri")
+    user_details = request.session.get("user_details")
+    if not user_details:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Missing session data",
+            },
+        )
 
-    state_from_session = request.session.get("user_details").get("state")
-
-    request.session["redhat_state"] = state
+    redirect_uri_from_session = user_details.get("redirect_uri")
+    state_from_session = user_details.get("state")
 
     redirect_url = urlparse(redirect_uri_from_session)
     query_dict = {
@@ -262,8 +278,18 @@ async def handle_authorization_code_grant(
     token_request: AuthorizationCodeTokenRequest, oauth_service: OAuthService
 ) -> Dict[str, Any]:
     """Handle authorization code grant with direct SSO exchange."""
+    sso_code, sep, sso_state = token_request.code.partition("::")
+    if not sep or not sso_code or not sso_state:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "invalid_grant",
+                "error_description": "Invalid authorization code",
+            },
+        )
+
     token_set = OAuth2Handler.get_access_token_from_authorization_code_flow(
-        token_request.code.split("::")[0], token_request.code.split("::")[1]
+        sso_code, sso_state
     )
 
     return token_set
