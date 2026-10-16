@@ -21,6 +21,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # Full history so Gitleaks can scan the repository, not just a staged diff.
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -37,3 +40,15 @@ jobs:
     - name: Run Pre Commit
       run: |
         source .venv/bin/activate && pre-commit run --all-files
+
+    # The gitleaks pre-commit hook only scans staged changes; CI has none.
+    # Install the binary directly (gitleaks-action is blocked by org allowlist).
+    - name: Install Gitleaks
+      run: |
+        curl -sSfL \
+          "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz" \
+          | tar -xz -C /usr/local/bin gitleaks
+        gitleaks version
+
+    - name: Gitleaks (full repository)
+      run: gitleaks detect --source . --verbose --redact
