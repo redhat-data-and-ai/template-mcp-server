@@ -2,7 +2,9 @@
 #   (or: make install)
 # Run manually: pre-commit run --all-files
 #
-# Secret scanning: gitleaks + detect-private-key (same approach as usernaut / template-ui).
+# Secret scanning: gitleaks (staged changes) + detect-private-key.
+# CI also runs a full-repo Gitleaks scan in .github/workflows/pre-commit.yml
+# (the upstream gitleaks hook is staged-only, so it is a no-op on a clean checkout).
 # Also enable GitHub Secret Scanning + Push Protection on the repo:
 # https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning
 # https://docs.github.com/en/code-security/concepts/secret-security/push-protection

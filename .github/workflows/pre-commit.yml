@@ -21,6 +21,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # Full history so Gitleaks can scan the repository, not just a staged diff.
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -37,3 +40,10 @@ jobs:
     - name: Run Pre Commit
       run: |
         source .venv/bin/activate && pre-commit run --all-files
+
+    # The gitleaks pre-commit hook only scans staged changes; CI has none.
+    # Run a full-repository scan here for defense in depth.
+    - name: Gitleaks (full repository)
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
