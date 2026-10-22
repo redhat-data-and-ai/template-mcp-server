@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -24,6 +27,7 @@ jobs:
       with:
         # Full history so Gitleaks can scan the repository, not just a staged diff.
         fetch-depth: 0
+        persist-credentials: false
 
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -45,10 +49,12 @@ jobs:
     # Install the binary directly (gitleaks-action is blocked by org allowlist).
     - name: Install Gitleaks
       run: |
+        mkdir -p "$HOME/.local/bin"
         curl -sSfL \
           "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz" \
-          | tar -xz -C /usr/local/bin gitleaks
-        gitleaks version
+          | tar -xz -C "$HOME/.local/bin" gitleaks
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        "$HOME/.local/bin/gitleaks" version
 
     - name: Gitleaks (full repository)
       run: gitleaks detect --source . --verbose --redact
