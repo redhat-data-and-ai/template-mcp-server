@@ -19,83 +19,32 @@ class TestOAuthControllerHandleCallback:
 
         mock_request = Mock()
         mock_request.query_params.get.side_effect = lambda key: {
-            "code": "auth_code_123",
-            "state": "state_123",
+            "code": "sso_code_123",
+            "state": "sso_state_123",
         }.get(key)
 
         mock_request.session = {
             "user_details": {
-                "auth_code": "stored_code_123",
-                "redirect_uri": "http://localhost:3000/callback",
+                "redirect_uri": "https://www.cursor.com/agents/mcp/oauth/callback",
+                "state": "cursor_state_123",
             }
         }
 
-        # Mock OAuth2Handler
-        mock_token = {"access_token": "token123", "refresh_token": "refresh123"}
+        oauth_service = AsyncMock(spec=OAuthService)
 
-        with patch(
-            "template_mcp_server.src.oauth.controller.OAuth2Handler"
-        ) as mock_handler:
-            mock_handler.get_access_token_from_authorization_code_flow.return_value = (
-                mock_token
-            )
+        result = await controller.handle_callback(mock_request, oauth_service)
 
-            # Create mock OAuth service with dependency injection
-            oauth_service = AsyncMock(spec=OAuthService)
-            oauth_service.add_token_to_code = AsyncMock()
-
-            result = await controller.handle_callback(mock_request, oauth_service)
-
-            # Verify OAuth2Handler was called correctly
-            mock_handler.get_access_token_from_authorization_code_flow.assert_called_once_with(
-                "auth_code_123", "state_123"
-            )
-
-            # Verify service was called
-            oauth_service.add_token_to_code.assert_called_once_with(
-                "stored_code_123", mock_token
-            )
-
-            # Verify redirect response
-            assert isinstance(result, RedirectResponse)
-            assert result.status_code == 302
-            assert "code=stored_code_123" in result.headers["location"]
+        assert isinstance(result, RedirectResponse)
+        assert result.status_code == 302
+        assert "code=sso_code_123%3A%3Asso_state_123" in result.headers["location"]
+        assert "state=cursor_state_123" in result.headers["location"]
 
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
-    async def test_handle_callback_missing_session_data(self, mock_settings):
-        """Test callback handling with missing session data in production mode."""
-        # Set production mode to test original flow
+    async def test_handle_callback_missing_code(self, mock_settings):
+        """Test callback handling when code query param is missing."""
         mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
 
-        mock_request = Mock()
-        mock_request.query_params.get.side_effect = lambda key: {
-            "code": "auth_code_123",
-            "state": "state_123",
-        }.get(key)
-
-        # Missing user_details in session
-        mock_request.session = {}
-
-        with patch(
-            "template_mcp_server.src.oauth.controller.OAuth2Handler"
-        ) as mock_handler:
-            mock_handler.get_access_token_from_authorization_code_flow.return_value = {
-                "access_token": "token"
-            }
-
-            # Create mock OAuth service
-            oauth_service = AsyncMock(spec=OAuthService)
-
-            # Should raise HTTPException when session data is missing
-            with pytest.raises(HTTPException) as exc_info:
-                await controller.handle_callback(mock_request, oauth_service)
-            assert exc_info.value.status_code == 400
-            assert exc_info.value.detail["error"] == "invalid_request"
-
-    @pytest.mark.asyncio
-    async def test_handle_callback_missing_code_param(self):
-        """Test callback handling when code or state query param is missing."""
         mock_request = Mock()
         mock_request.query_params.get.side_effect = lambda key: {
             "code": None,
@@ -104,18 +53,16 @@ class TestOAuthControllerHandleCallback:
 
         oauth_service = AsyncMock(spec=OAuthService)
 
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_callback(mock_request, oauth_service)
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail["error"] == "invalid_request"
-        assert (
-            "Missing code or state parameter"
-            in exc_info.value.detail["error_description"]
-        )
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
 
+    @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
-    async def test_handle_callback_missing_state_param(self):
+    async def test_handle_callback_missing_state(self, mock_settings):
         """Test callback handling when state query param is missing."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
+
         mock_request = Mock()
         mock_request.query_params.get.side_effect = lambda key: {
             "code": "auth_code_123",
@@ -124,26 +71,42 @@ class TestOAuthControllerHandleCallback:
 
         oauth_service = AsyncMock(spec=OAuthService)
 
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_callback(mock_request, oauth_service)
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail["error"] == "invalid_request"
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
 
     @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
-    async def test_handle_callback_local_development(self, mock_settings):
-        """Test OAuth callback handling in local development mode."""
-        # Set local development mode
-        mock_settings.USE_EXTERNAL_BROWSER_AUTH = True
+    async def test_handle_callback_missing_session_data(self, mock_settings):
+        """Test callback handling with missing session data in production mode."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = False
 
-        # Mock request
         mock_request = Mock()
         mock_request.query_params.get.side_effect = lambda key: {
             "code": "auth_code_123",
             "state": "state_123",
         }.get(key)
 
-        # Mock OAuth2Handler
+        mock_request.session = {}
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        result = await controller.handle_callback(mock_request, oauth_service)
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 400
+
+    @patch("template_mcp_server.src.oauth.controller.settings")
+    @pytest.mark.asyncio
+    async def test_handle_callback_local_development(self, mock_settings):
+        """Test OAuth callback handling in local development mode."""
+        mock_settings.USE_EXTERNAL_BROWSER_AUTH = True
+
+        mock_request = Mock()
+        mock_request.query_params.get.side_effect = lambda key: {
+            "code": "auth_code_123",
+            "state": "state_123",
+        }.get(key)
+
         mock_token = {"access_token": "dev_token_123", "refresh_token": "refresh123"}
 
         with (
@@ -158,20 +121,16 @@ class TestOAuthControllerHandleCallback:
                 mock_token
             )
 
-            # Create mock OAuth service
             oauth_service = AsyncMock(spec=OAuthService)
 
             result = await controller.handle_callback(mock_request, oauth_service)
 
-            # Verify OAuth2Handler was called correctly
             mock_handler.get_access_token_from_authorization_code_flow.assert_called_once_with(
                 "auth_code_123", "state_123"
             )
 
-            # Verify token was stored in local development mode
             assert mock_api_module._local_development_token == "dev_token_123"
 
-            # Verify JSON response returned
             assert isinstance(result, JSONResponse)
             assert result.status_code == 200
 
@@ -192,7 +151,6 @@ class TestOAuthControllerHandleAuthorize:
             "state": "state_123",
         }
 
-        # Create mock OAuth service
         oauth_service = AsyncMock(spec=OAuthService)
         oauth_service.validate_client = AsyncMock(return_value=None)
 
@@ -210,10 +168,8 @@ class TestOAuthControllerHandleAuthorize:
             "response_type": "code",
             "client_id": "client123",
             "redirect_uri": "http://localhost:3000/callback",
-            # Missing code_challenge and code_challenge_method
         }
 
-        # Create mock OAuth service
         oauth_service = AsyncMock(spec=OAuthService)
 
         with pytest.raises(HTTPException) as exc_info:
@@ -227,14 +183,13 @@ class TestOAuthControllerHandleAuthorize:
         """Test authorization with unsupported response type."""
         mock_request = Mock()
         mock_request.query_params = {
-            "response_type": "token",  # Unsupported
+            "response_type": "token",
             "client_id": "client123",
             "redirect_uri": "http://localhost:3000/callback",
             "code_challenge": "challenge123",
             "code_challenge_method": "S256",
         }
 
-        # Create mock OAuth service
         oauth_service = AsyncMock(spec=OAuthService)
 
         with pytest.raises(HTTPException) as exc_info:
@@ -247,19 +202,14 @@ class TestOAuthControllerHandleAuthorize:
 class TestOAuthControllerHandleToken:
     """Test handle_token function."""
 
-    @patch("template_mcp_server.src.oauth.controller.settings")
     @pytest.mark.asyncio
-    async def test_handle_token_authorization_code_grant(self, mock_settings):
+    async def test_handle_token_authorization_code_grant(self):
         """Test token endpoint with authorization code grant."""
-        mock_settings.COMPATIBLE_WITH_CURSOR = False
-
-        # Mock form data
         form_data = {
             "grant_type": "authorization_code",
-            "code": "code123",
-            "redirect_uri": "http://localhost:3000/callback",
-            "client_id": "client123",
-            "client_secret": "secret123",
+            "code": "sso_code_123::sso_state_123",
+            "redirect_uri": "https://www.cursor.com/agents/mcp/oauth/callback",
+            "client_id": "test_client",
             "code_verifier": "verifier123",
         }
 
@@ -269,39 +219,31 @@ class TestOAuthControllerHandleToken:
         mock_request.json = AsyncMock()
         mock_request.body = AsyncMock(return_value=b"")
 
-        # Mock code data
-        code_data = {
-            "client_id": "client123",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "challenge123",
-            "snowflake_token": {
-                "access_token": "snowflake_access",
-                "refresh_token": "snowflake_refresh",
-            },
+        mock_token = {
+            "access_token": "sso_access_token",
+            "refresh_token": "sso_refresh_token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "scope": "openid email profile",
         }
 
-        # Create mock OAuth service
         oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code = AsyncMock(return_value=code_data)
-        oauth_service.validate_client = AsyncMock(return_value={"id": "client123"})
-        oauth_service.mark_code_as_used = AsyncMock()
 
         with patch(
-            "template_mcp_server.src.oauth.controller.verify_code_challenge",
-            return_value=True,
-        ):
+            "template_mcp_server.src.oauth.controller.OAuth2Handler"
+        ) as mock_handler:
+            mock_handler.get_access_token_from_authorization_code_flow.return_value = (
+                mock_token
+            )
+
             result = await controller.handle_token(mock_request, oauth_service)
 
-            # Verify service calls
-            oauth_service.validate_authorization_code.assert_called_once_with("code123")
-            oauth_service.validate_client.assert_called_once_with(
-                "client123", "secret123"
+            mock_handler.get_access_token_from_authorization_code_flow.assert_called_once_with(
+                "sso_code_123", "sso_state_123"
             )
-            oauth_service.mark_code_as_used.assert_called_once_with("code123")
 
-            # Verify response
-            assert result["access_token"] == "snowflake_access"
-            assert result["refresh_token"] == "snowflake_refresh"
+            assert result["access_token"] == "sso_access_token"
+            assert result["refresh_token"] == "sso_refresh_token"
             assert result["token_type"] == "Bearer"
 
     @pytest.mark.asyncio
@@ -326,10 +268,7 @@ class TestOAuthControllerHandleToken:
     @pytest.mark.asyncio
     async def test_handle_token_missing_parameters(self):
         """Test token endpoint with missing required parameters."""
-        form_data = {
-            "grant_type": "authorization_code"
-            # Missing code, redirect_uri, client_id, code_verifier
-        }
+        form_data = {"grant_type": "authorization_code"}
 
         mock_request = AsyncMock()
         mock_request.headers = {"content-type": "application/x-www-form-urlencoded"}
@@ -344,73 +283,6 @@ class TestOAuthControllerHandleToken:
 
         assert exc_info.value.status_code == 400
         assert "invalid_request" in str(exc_info.value.detail)
-
-    @pytest.mark.asyncio
-    async def test_handle_token_invalid_code(self):
-        """Test token endpoint with invalid authorization code."""
-        form_data = {
-            "grant_type": "authorization_code",
-            "code": "invalid_code",
-            "redirect_uri": "http://localhost:3000/callback",
-            "client_id": "client123",
-            "code_verifier": "verifier123",
-        }
-
-        mock_request = AsyncMock()
-        mock_request.headers = {"content-type": "application/x-www-form-urlencoded"}
-        mock_request.form = AsyncMock(return_value=form_data)
-        mock_request.json = AsyncMock()
-        mock_request.body = AsyncMock(return_value=b"")
-
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code = AsyncMock(return_value=None)
-
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_token(mock_request, oauth_service)
-
-        assert exc_info.value.status_code == 400
-        assert "invalid_grant" in str(exc_info.value.detail)
-
-    @patch("template_mcp_server.src.oauth.controller.settings")
-    @pytest.mark.asyncio
-    async def test_handle_token_pkce_verification_failure(self, mock_settings):
-        """Test token endpoint with PKCE verification failure."""
-        mock_settings.COMPATIBLE_WITH_CURSOR = False
-
-        form_data = {
-            "grant_type": "authorization_code",
-            "code": "code123",
-            "redirect_uri": "http://localhost:3000/callback",
-            "client_id": "client123",
-            "client_secret": "secret123",
-            "code_verifier": "wrong_verifier",
-        }
-
-        mock_request = AsyncMock()
-        mock_request.headers = {"content-type": "application/x-www-form-urlencoded"}
-        mock_request.form = AsyncMock(return_value=form_data)
-        mock_request.json = AsyncMock()
-        mock_request.body = AsyncMock(return_value=b"")
-
-        code_data = {
-            "client_id": "client123",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "challenge123",
-        }
-
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code = AsyncMock(return_value=code_data)
-        oauth_service.validate_client = AsyncMock(return_value={"id": "client123"})
-
-        with patch(
-            "template_mcp_server.src.oauth.controller.verify_code_challenge",
-            return_value=False,
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await controller.handle_token(mock_request, oauth_service)
-
-            assert exc_info.value.status_code == 400
-            assert "invalid_grant" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_handle_token_refresh_token_grant(self):
@@ -510,7 +382,6 @@ class TestOAuthControllerHandleRegister:
             "read write",
         )
 
-        # Convert Pydantic model to dict for comparison
         result_dict = result.model_dump() if hasattr(result, "model_dump") else result
         assert result_dict == client_response
 
@@ -526,7 +397,6 @@ class TestOAuthControllerHandleRegister:
         mock_request.json = AsyncMock(return_value=registration_data)
 
         oauth_service = AsyncMock(spec=OAuthService)
-        # Mock a complete client response for Pydantic validation
         complete_client_response = {
             "client_id": "client123",
             "client_secret": "secret123",
@@ -547,12 +417,11 @@ class TestOAuthControllerHandleRegister:
             [
                 "authorization_code",
                 "refresh_token",
-            ],  # Default grant types from Pydantic model
-            ["code"],  # Default response types from Pydantic model
-            "read write",  # Default scope from Pydantic model
+            ],
+            ["code"],
+            "read write",
         )
 
-        # Convert Pydantic model to dict for comparison
         result_dict = result.model_dump() if hasattr(result, "model_dump") else result
         assert result_dict["client_id"] == "client123"
 
@@ -578,7 +447,7 @@ class TestOAuthControllerHandleIntrospect:
         token_data = {
             "client_id": "client123",
             "scope": "read write",
-            "expires_at": 9999999999,  # Far future
+            "expires_at": 9999999999,
         }
 
         oauth_service = AsyncMock(spec=OAuthService)
@@ -664,8 +533,6 @@ class TestOAuthControllerIntegration:
     @pytest.mark.asyncio
     async def test_complete_oauth_flow(self):
         """Test a complete OAuth authorization code flow."""
-        # This would test the integration between authorize, callback, and token endpoints
-        # For now, just a placeholder that passes
         oauth_service = AsyncMock(spec=OAuthService)
         assert oauth_service is not None
 
@@ -780,244 +647,102 @@ class TestAuthorizationCodeGrantEdgeCases:
     """Test handle_authorization_code_grant edge cases."""
 
     @pytest.mark.asyncio
-    async def test_invalid_authorization_code(self):
-        """Test with invalid authorization code."""
+    async def test_successful_grant_with_sso_exchange(self):
+        """Test successful authorization code grant via SSO exchange."""
         from template_mcp_server.src.oauth.models import (
             AuthorizationCodeTokenRequest,
         )
 
         token_request = AuthorizationCodeTokenRequest(
             grant_type="authorization_code",
-            code="invalid_code",
+            code="sso_code_123::sso_state_123",
+            redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
             client_id="test_client",
-            client_secret="test_secret",
-            redirect_uri="http://localhost:3000/callback",
             code_verifier="test_verifier",
         )
 
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = None
-
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_authorization_code_grant(
-                token_request, oauth_service
-            )
-
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail["error"] == "invalid_grant"
-        assert (
-            "Invalid or expired authorization code"
-            in exc_info.value.detail["error_description"]
-        )
-        oauth_service.validate_authorization_code.assert_called_once_with(
-            "invalid_code"
-        )
-
-    @patch("template_mcp_server.src.oauth.controller.settings")
-    @pytest.mark.asyncio
-    async def test_invalid_client_credentials(self, mock_settings):
-        """Test with invalid client credentials."""
-        mock_settings.COMPATIBLE_WITH_CURSOR = False
-
-        from template_mcp_server.src.oauth.models import (
-            AuthorizationCodeTokenRequest,
-        )
-
-        token_request = AuthorizationCodeTokenRequest(
-            grant_type="authorization_code",
-            code="valid_code",
-            client_id="invalid_client",
-            client_secret="invalid_secret",
-            redirect_uri="http://localhost:3000/callback",
-            code_verifier="test_verifier",
-        )
-
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = {
-            "client_id": "test_client",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "test_challenge",
-            "scope": "read",
+        mock_token = {
+            "access_token": "sso_access_token",
+            "refresh_token": "sso_refresh_token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "scope": "openid email profile",
         }
-        oauth_service.validate_client.return_value = None
-
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_authorization_code_grant(
-                token_request, oauth_service
-            )
-
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail["error"] == "invalid_client"
-        assert (
-            "Invalid client credentials" in exc_info.value.detail["error_description"]
-        )
-
-    @pytest.mark.asyncio
-    async def test_redirect_uri_mismatch(self):
-        """Test with mismatched redirect URI."""
-        from template_mcp_server.src.oauth.models import (
-            AuthorizationCodeTokenRequest,
-        )
-
-        token_request = AuthorizationCodeTokenRequest(
-            grant_type="authorization_code",
-            code="valid_code",
-            client_id="test_client",
-            client_secret="test_secret",
-            redirect_uri="http://localhost:3000/different",
-            code_verifier="test_verifier",
-        )
 
         oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = {
-            "client_id": "test_client",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "test_challenge",
-            "scope": "read",
-        }
-        oauth_service.validate_client.return_value = {"id": "test_client"}
-
-        with pytest.raises(HTTPException) as exc_info:
-            await controller.handle_authorization_code_grant(
-                token_request, oauth_service
-            )
-
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail["error"] == "invalid_grant"
-        assert "Redirect URI mismatch" in exc_info.value.detail["error_description"]
-
-    @patch("template_mcp_server.src.oauth.controller.settings")
-    @pytest.mark.asyncio
-    async def test_pkce_verification_failure(self, mock_settings):
-        """Test with PKCE verification failure."""
-        mock_settings.COMPATIBLE_WITH_CURSOR = False
-
-        from template_mcp_server.src.oauth.models import (
-            AuthorizationCodeTokenRequest,
-        )
-
-        token_request = AuthorizationCodeTokenRequest(
-            grant_type="authorization_code",
-            code="valid_code",
-            client_id="test_client",
-            client_secret="test_secret",
-            redirect_uri="http://localhost:3000/callback",
-            code_verifier="wrong_verifier",
-        )
-
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = {
-            "client_id": "test_client",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "test_challenge",
-            "scope": "read",
-        }
-        oauth_service.validate_client.return_value = {"id": "test_client"}
 
         with patch(
-            "template_mcp_server.src.oauth.controller.verify_code_challenge"
-        ) as mock_verify:
-            mock_verify.return_value = False
+            "template_mcp_server.src.oauth.controller.OAuth2Handler"
+        ) as mock_handler:
+            mock_handler.get_access_token_from_authorization_code_flow.return_value = (
+                mock_token
+            )
 
-            with pytest.raises(HTTPException) as exc_info:
+            result = await controller.handle_authorization_code_grant(
+                token_request, oauth_service
+            )
+
+            mock_handler.get_access_token_from_authorization_code_flow.assert_called_once_with(
+                "sso_code_123", "sso_state_123"
+            )
+
+            assert result["access_token"] == "sso_access_token"
+            assert result["refresh_token"] == "sso_refresh_token"
+            assert result["token_type"] == "Bearer"
+
+    @pytest.mark.asyncio
+    async def test_sso_exchange_failure(self):
+        """Test authorization code grant when SSO exchange fails."""
+        from template_mcp_server.src.oauth.models import (
+            AuthorizationCodeTokenRequest,
+        )
+
+        token_request = AuthorizationCodeTokenRequest(
+            grant_type="authorization_code",
+            code="invalid_code::invalid_state",
+            redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
+            client_id="test_client",
+            code_verifier="test_verifier",
+        )
+
+        oauth_service = AsyncMock(spec=OAuthService)
+
+        with patch(
+            "template_mcp_server.src.oauth.controller.OAuth2Handler"
+        ) as mock_handler:
+            mock_handler.get_access_token_from_authorization_code_flow.side_effect = (
+                Exception("SSO exchange failed")
+            )
+
+            with pytest.raises(Exception, match="SSO exchange failed"):
                 await controller.handle_authorization_code_grant(
                     token_request, oauth_service
                 )
 
-            assert exc_info.value.status_code == 400
-            assert exc_info.value.detail["error"] == "invalid_grant"
-            assert "Invalid code verifier" in exc_info.value.detail["error_description"]
-            mock_verify.assert_called_once_with("wrong_verifier", "test_challenge")
-
     @pytest.mark.asyncio
-    async def test_successful_grant_with_snowflake_tokens(self):
-        """Test successful authorization code grant with Snowflake tokens."""
+    async def test_malformed_code_without_separator(self):
+        """Test authorization code grant with code missing :: separator."""
         from template_mcp_server.src.oauth.models import (
             AuthorizationCodeTokenRequest,
         )
 
         token_request = AuthorizationCodeTokenRequest(
             grant_type="authorization_code",
-            code="valid_code",
+            code="no_separator_here",
+            redirect_uri="https://www.cursor.com/agents/mcp/oauth/callback",
             client_id="test_client",
-            client_secret="test_secret",
-            redirect_uri="http://localhost:3000/callback",
             code_verifier="test_verifier",
         )
 
         oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = {
-            "client_id": "test_client",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "test_challenge",
-            "scope": "read write",
-            "snowflake_token": {
-                "access_token": "snowflake_access_token",
-                "refresh_token": "snowflake_refresh_token",
-            },
-        }
-        oauth_service.validate_client.return_value = {"id": "test_client"}
-        oauth_service.mark_code_as_used = AsyncMock()
 
-        with patch(
-            "template_mcp_server.src.oauth.controller.verify_code_challenge"
-        ) as mock_verify:
-            mock_verify.return_value = True
-
-            result = await controller.handle_authorization_code_grant(
+        with pytest.raises(HTTPException) as exc_info:
+            await controller.handle_authorization_code_grant(
                 token_request, oauth_service
             )
 
-            assert result["access_token"] == "snowflake_access_token"
-            assert result["refresh_token"] == "snowflake_refresh_token"
-            assert result["token_type"] == "Bearer"
-            assert result["expires_in"] == 3600
-            assert result["scope"] == "read write"
-
-            oauth_service.mark_code_as_used.assert_called_once_with("valid_code")
-
-    @pytest.mark.asyncio
-    async def test_successful_grant_without_snowflake_tokens(self):
-        """Test successful authorization code grant without Snowflake tokens."""
-        from template_mcp_server.src.oauth.models import (
-            AuthorizationCodeTokenRequest,
-        )
-
-        token_request = AuthorizationCodeTokenRequest(
-            grant_type="authorization_code",
-            code="valid_code",
-            client_id="test_client",
-            client_secret="test_secret",
-            redirect_uri="http://localhost:3000/callback",
-            code_verifier="test_verifier",
-        )
-
-        oauth_service = AsyncMock(spec=OAuthService)
-        oauth_service.validate_authorization_code.return_value = {
-            "client_id": "test_client",
-            "redirect_uri": "http://localhost:3000/callback",
-            "code_challenge": "test_challenge",
-            "scope": "read",
-        }
-        oauth_service.validate_client.return_value = {"id": "test_client"}
-        oauth_service.mark_code_as_used = AsyncMock()
-
-        with patch(
-            "template_mcp_server.src.oauth.controller.verify_code_challenge"
-        ) as mock_verify:
-            mock_verify.return_value = True
-
-            result = await controller.handle_authorization_code_grant(
-                token_request, oauth_service
-            )
-
-            assert result["access_token"] == "oauth_access_token_placeholder"
-            assert result["token_type"] == "Bearer"
-            assert result["expires_in"] == 3600
-            assert result["scope"] == "read"
-            assert "refresh_token" not in result
-
-            oauth_service.mark_code_as_used.assert_called_once_with("valid_code")
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["error"] == "invalid_grant"
 
 
 class TestRefreshTokenGrantEdgeCases:

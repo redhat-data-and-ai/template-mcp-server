@@ -97,6 +97,29 @@ class TestOAuth2Handler:
 
     @patch("template_mcp_server.src.oauth.handler.settings")
     @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
+    def test_get_access_token_scope_list_converted_to_string(
+        self, mock_create_session, mock_settings
+    ):
+        """Test that scope returned as a list is converted to a space-separated string."""
+        mock_settings.SSO_CLIENT_SECRET = "test_secret"
+
+        mock_session = Mock()
+        mock_token = {
+            "access_token": "token123",
+            "token_type": "Bearer",
+            "scope": ["openid", "email", "profile"],
+        }
+        mock_session.fetch_token.return_value = mock_token
+        mock_create_session.return_value = mock_session
+
+        result = OAuth2Handler.get_access_token_from_authorization_code_flow(
+            "code123", "state123"
+        )
+
+        assert result["scope"] == "openid email profile"
+
+    @patch("template_mcp_server.src.oauth.handler.settings")
+    @patch("template_mcp_server.src.oauth.handler.OAuth2Handler.create_oauth_session")
     def test_get_access_token_from_refresh_token(
         self, mock_create_session, mock_settings
     ):

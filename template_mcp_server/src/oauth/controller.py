@@ -26,7 +26,7 @@ from .models import (
     ClientRegistrationResponse,
     RefreshTokenRequest,
 )
-from .service import OAuthService, verify_code_challenge
+from .service import OAuthService
 
 logger = get_python_logger(settings.PYTHON_LOG_LEVEL)
 
@@ -40,26 +40,22 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
     state = request.query_params.get("state")
 
     if not code or not state:
-        raise HTTPException(
+        return JSONResponse(
             status_code=400,
-            detail={
+            content={
                 "error": "invalid_request",
                 "error_description": "Missing code or state parameter",
             },
         )
 
-    token_set_from_code = OAuth2Handler.get_access_token_from_authorization_code_flow(
-        code, state
-    )
-
-    logger.debug("Access token obtained successfully")
-
     if settings.USE_EXTERNAL_BROWSER_AUTH:
-        access_token = token_set_from_code.get("access_token")
+        token_set = OAuth2Handler.get_access_token_from_authorization_code_flow(
+            code, state
+        )
+        access_token = token_set.get("access_token")
         if access_token:
             api_module._local_development_token = access_token
             logger.info("Local development token stored successfully")
-
             return JSONResponse(
                 status_code=200,
                 content={
@@ -71,22 +67,20 @@ async def handle_callback(request: Request, oauth_service: OAuthService) -> Resp
 
     user_details = request.session.get("user_details")
     if not user_details:
-        raise HTTPException(
+        return JSONResponse(
             status_code=400,
-            detail={
+            content={
                 "error": "invalid_request",
                 "error_description": "Missing session data",
             },
         )
-    code_from_session = user_details.get("auth_code")
-    state_from_session = user_details.get("state")
-    redirect_uri_from_session = user_details.get("redirect_uri")
 
-    await oauth_service.add_token_to_code(code_from_session, token_set_from_code)
+    redirect_uri_from_session = user_details.get("redirect_uri")
+    state_from_session = user_details.get("state")
 
     redirect_url = urlparse(redirect_uri_from_session)
     query_dict = {
-        "code": code_from_session,
+        "code": f"{code}::{state}",
         "state": state_from_session,
     }
     redirect_url_str = f"{redirect_url.scheme}://{redirect_url.netloc}{redirect_url.path}?{urlencode(query_dict)}"
@@ -151,23 +145,11 @@ async def handle_authorize(request: Request, oauth_service: OAuthService) -> Res
                 },
             )
 
-        # Generate authorization code
-        auth_code = await oauth_service.create_authorization_code(
-            client_id,
-            redirect_uri,
-            scope,
-            code_challenge,
-            code_challenge_method,
-            state or "",
-        )
-
+        # Store session data for the callback to retrieve
         request.session["user_details"] = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "scope": scope,
-            "code_challenge": code_challenge,
-            "code_challenge_method": code_challenge_method,
-            "auth_code": auth_code,
             "state": state,
         }
 
@@ -230,7 +212,6 @@ async def handle_token(request: Request, oauth_service: OAuthService) -> Dict[st
         if grant_type == "authorization_code":
             try:
                 auth_code_request = AuthorizationCodeTokenRequest(**request_data)
-                logger.info(f"Token request: {auth_code_request}")
                 return await handle_authorization_code_grant(
                     auth_code_request, oauth_service
                 )
@@ -296,85 +277,22 @@ async def handle_token(request: Request, oauth_service: OAuthService) -> Dict[st
 async def handle_authorization_code_grant(
     token_request: AuthorizationCodeTokenRequest, oauth_service: OAuthService
 ) -> Dict[str, Any]:
-    """Handle authorization code grant with Pydantic validation."""
-    # Validate the authorization code
-    code_data = await oauth_service.validate_authorization_code(token_request.code)
-
-    if not code_data:
+    """Handle authorization code grant with direct SSO exchange."""
+    sso_code, sep, sso_state = token_request.code.partition("::")
+    if not sep or not sso_code or not sso_state:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": "invalid_grant",
-                "error_description": "Invalid or expired authorization code",
+                "error_description": "Invalid authorization code",
             },
         )
 
-    # Validate client credentials
-    if not settings.COMPATIBLE_WITH_CURSOR:
-        if token_request.client_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Client ID is required",
-                },
-            )
-        client = await oauth_service.validate_client(
-            token_request.client_id, token_request.client_secret
-        )
-        if not client:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client credentials",
-                },
-            )
+    token_set = OAuth2Handler.get_access_token_from_authorization_code_flow(
+        sso_code, sso_state
+    )
 
-    # Verify redirect URI matches
-    if token_request.redirect_uri != code_data["redirect_uri"]:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "invalid_grant",
-                "error_description": "Redirect URI mismatch",
-            },
-        )
-
-    if not settings.COMPATIBLE_WITH_CURSOR:
-        # Verify PKCE
-        if not verify_code_challenge(
-            token_request.code_verifier, code_data["code_challenge"]
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "invalid_grant",
-                    "error_description": "Invalid code verifier",
-                },
-            )
-
-    # Mark the code as used
-    await oauth_service.mark_code_as_used(token_request.code)
-
-    # Return OAuth response with Snowflake tokens if available
-    oauth_response = {
-        "access_token": "oauth_access_token_placeholder",
-        "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": code_data.get("scope", "read"),
-    }
-
-    # Include Snowflake tokens if available from the code
-    snowflake_tokens = code_data.get("snowflake_token", {})
-    if snowflake_tokens:
-        oauth_response["access_token"] = snowflake_tokens.get(
-            "access_token", oauth_response["access_token"]
-        )
-        if "refresh_token" in snowflake_tokens:
-            oauth_response["refresh_token"] = snowflake_tokens.get("refresh_token")
-
-    return oauth_response
+    return token_set
 
 
 async def handle_refresh_token_grant_pydantic(

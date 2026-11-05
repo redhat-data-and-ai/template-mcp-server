@@ -51,6 +51,9 @@ class OAuth2Handler:
             client_secret=settings.SSO_CLIENT_SECRET,
             include_client_id=True,
         )
+        scope = token.get("scope")
+        if isinstance(scope, list):
+            token["scope"] = " ".join(scope)
         return token
 
     @staticmethod
