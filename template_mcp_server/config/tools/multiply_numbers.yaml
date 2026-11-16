@@ -1,0 +1,27 @@
+name: multiply_numbers
+enabled: true
+handler: template_mcp_server.src.tools.multiply_tool:multiply_numbers
+display_name: Number Multiplication
+description: Multiply two floating-point numbers.
+params:
+  - name: a
+    type: float
+    required: true
+    description: First number to multiply
+  - name: b
+    type: float
+    required: true
+    description: Second number to multiply
+agent:
+  usecase: Multiply two (floating point) numbers together
+  instructions: |
+    1. Provide two numeric values (int or float)
+    2. Call function
+    3. Receive result
+  input_description: "Two parameters: a (number), b (number). Examples: (4, 5), (3.14, 2.0), (-1, 10)"
+  output_description: Dictionary with status, operation, input values (a, b), result, and message
+  examples:
+    - multiply_numbers(4, 5)
+    - multiply_numbers(3.14, 2.0)
+  prerequisites: None - standalone arithmetic operation
+  related_tools: []

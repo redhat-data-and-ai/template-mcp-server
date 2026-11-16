@@ -1,0 +1,55 @@
+# Copy this file to create a new tool config:
+#   cp tool_template.yaml.example your_tool.yaml
+#
+# Files ending in .yaml.example are NOT loaded (loader globs *.yaml only).
+# See docs/tutorial.md for the full walkthrough.
+
+# MCP tool name — must be unique across all *.yaml files in this directory.
+name: your_tool
+
+# Set false to keep the config on disk without registering at startup.
+enabled: true
+
+# Python handler as module:function (behavior lives in src/tools/).
+handler: template_mcp_server.src.tools.your_tool:your_tool
+
+# Human-friendly label shown in agent metadata.
+display_name: Your Tool
+
+# Short summary for tools/list. Use | or > for longer multiline text.
+description: |
+  One-line summary of what the tool does.
+
+  Optional extra paragraph with more detail for agents and reviewers.
+
+params:
+  # Required parameter
+  - name: input
+    type: string # str, string, float, int, integer, bool, boolean
+    required: true
+    description: Primary input for the tool
+
+  # Optional parameter with default
+  - name: format
+    type: string
+    required: false
+    default: json
+    description: Output format (optional)
+
+agent:
+  usecase: When an agent should choose this tool over others
+
+  instructions: |
+    1. First step for the agent
+    2. Second step
+    3. What to expect back
+
+  input_description: "input (string): required; format (string, optional): default json"
+  output_description: Dictionary with status, operation, result fields, and message
+
+  examples:
+    - your_tool("example")
+    - your_tool("example", format="text")
+
+  prerequisites: none
+  related_tools: [] # names of other tools in this directory, e.g. [multiply_numbers]

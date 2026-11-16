@@ -84,12 +84,42 @@ The server configuration is managed through environment variables:
 | `ENABLE_AUTH`               | `True`*                 | Enable OAuth authentication (see[Auth Guide](authentication.md))             |
 | `USE_EXTERNAL_BROWSER_AUTH` | `False`                 | Browser-based OAuth for local dev                                         |
 | `COMPATIBLE_WITH_CURSOR`    | `False`                 | Cursor IDE OAuth2 compatibility mode                                      |
+| `MCP_TOOLS_CONFIG_PATH`     | *(bundled)*             | Directory of per-tool YAML configs                                        |
 | `CORS_ENABLED`              | `False`                 | Enable CORS middleware                                                    |
 | `CORS_ORIGINS`              | `["*"]`                 | Allowed CORS origins                                                      |
 
 *\* `ENABLE_AUTH` defaults to `True` in code but `False` in `.env.example`. Always copy `.env.example` to `.env`.*
 
 See the [Authentication Guide](authentication.md) for the full list of `SSO_*` and `POSTGRES_*` variables.
+
+## Tools config-as-code
+
+Tool definitions live in `template_mcp_server/config/tools/` (one YAML file per tool). Handlers live in `template_mcp_server/src/tools/`. See [Architecture](architecture.md#tools-config-as-code) for loading and invocation diagrams.
+
+```bash
+# Optional: mount an alternate config directory (OpenShift ConfigMap, local override)
+export MCP_TOOLS_CONFIG_PATH=/path/to/tools
+```
+
+To add a tool: create a handler + YAML config, restart the server. No `mcp.py` changes required. See the [Tutorial](tutorial.md).
+
+### Connect from Cursor
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+"template-mcp-server": {
+  "url": "http://localhost:5001/mcp",
+  "type": "streamableHttp"
+}
+```
+
+**Local dev tips:**
+
+- Keep `ENABLE_AUTH=False` in `.env` unless testing OAuth
+- Server must be running before enabling the MCP in Cursor (`make local`)
+- If the port is in use, set `MCP_PORT` in `.env` and update the URL in `mcp.json`
+- If Cursor shows Error with no Login button, use **Logout** to reset stale auth state, then toggle off/on
 
 ## Authentication
 
@@ -110,10 +140,19 @@ By default, `.env.example` ships with `ENABLE_AUTH=False` so you can start devel
 2. **Test MCP tools:**
 
    ```bash
-   # Test multiply tool via MCP endpoint
-   curl -X POST "http://localhost:5001/mcp" \
-        -H "Content-Type: application/json" \
-        -d '{"method": "tools/call", "params": {"name": "multiply_numbers", "arguments": {"a": 5, "b": 3}}}'
+   # Recommended: use the FastMCP client example
+   python examples/fastmcp_client.py
+
+   # Or call a tool directly (server must be running)
+   python -c "
+   import asyncio
+   from fastmcp import Client
+   async def main():
+       c = Client({'mcpServers': {'t': {'url': 'http://localhost:5001/mcp'}}})
+       async with c:
+           print(await c.call_tool('multiply_numbers', {'a': 5, 'b': 3}))
+   asyncio.run(main())
+   "
    ```
 
 ## Running Tests
@@ -191,7 +230,8 @@ The project includes a comprehensive test suite covering unit tests, integration
 
 **Test Files:**
 
-- `test_tools.py` - Tool unit tests (multiply, code review, logo)
+- `test_tools.py` - Tool handler unit tests (multiply, code review, logo)
+- `test_tools_loader.py` - YAML loader, registry, and wrapper tests
 - `test_settings.py` - Configuration and environment variable tests
 - `test_mcp.py` - MCP server initialization and tool registration tests
 - `test_api.py` - FastAPI endpoint and health check tests

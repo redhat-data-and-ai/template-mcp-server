@@ -36,7 +36,11 @@ dependencies = [
     "psycopg==3.2.3",
     "itsdangerous==2.2.0",
     "requests-oauthlib==2.0.0",
+    "pyyaml==6.0.2",
 ]
+
+[tool.hatch.build.targets.wheel.force-include]
+"template_mcp_server/config" = "template_mcp_server/config"
 
 [project.optional-dependencies]
 dev = [
@@ -45,6 +49,7 @@ dev = [
     "pytest-cov==6.2.1",
     "ruff==0.12.2",
     "mypy==1.16.1",
+    "types-PyYAML==6.0.12.20250516",
     "pre-commit==4.2.0",
     "httpx==0.28.1",
     "langchain-google-genai==2.1.8",

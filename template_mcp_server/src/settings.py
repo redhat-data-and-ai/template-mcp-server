@@ -316,6 +316,17 @@ class Settings(BaseSettings):
             "example": "true",
         },
     )
+    MCP_TOOLS_CONFIG_PATH: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "env": "MCP_TOOLS_CONFIG_PATH",
+            "description": (
+                "Path to directory containing per-tool YAML configs. "
+                "Defaults to template_mcp_server/config/tools when unset."
+            ),
+            "example": "/app/config/tools",
+        },
+    )
 
     @model_validator(mode="after")
     def validate_oauth_scopes(self) -> "Settings":

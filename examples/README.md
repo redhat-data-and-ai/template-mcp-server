@@ -33,12 +33,12 @@ python examples/langgraph_client.py
 
 ## 🔧 **Configuration**
 
-**Update connection settings for your deployment:**
+**Update connection settings for your deployment** (match `MCP_PORT` in `.env`):
 
 ```python
 # Both files - update these URLs
-server_url = "http://localhost:5001"           # Local development
-# server_url = "http://0.0.0.0:4001"          # Custom port
+server_url = "http://localhost:5001"           # Default local development
+# server_url = "http://localhost:5010"        # If MCP_PORT overridden in .env
 # server_url = "https://your-mcp.apps.cluster.com"  # Production OpenShift
 ```
 

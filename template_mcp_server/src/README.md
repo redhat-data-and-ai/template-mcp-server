@@ -24,9 +24,9 @@ src/
 
 ## 🚀 **Quick Start**
 
-1. **Add your tools** → `tools/your_domain_tool.py`
-2. **Add static assets** → `assets/your_file.png`
-3. **Register tools** → Update `mcp.py`
+1. **Add your handler** → `tools/your_domain_tool.py`
+2. **Add tool config** → `../config/tools/your_domain_tool.yaml`
+3. **Add static assets** → `assets/your_file.png`
 4. **Test** → `pytest tests/test_tools.py`
 
 ## 📝 **Next Steps**
